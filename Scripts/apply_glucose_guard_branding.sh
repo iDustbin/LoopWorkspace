@@ -1,22 +1,11 @@
 #!/usr/bin/env bash
-# Pull Glucose Guard branding from iDustbin/glucoseguard and apply
-# it to this LoopWorkspace checkout. Used after upstream LoopKit sync so
-# icons and the display name survive a fork reset.
+# Apply the Glucose Guard Xcode design from this LoopWorkspace checkout.
+# Used after Loop submodule checkout so icons, name, and SwiftUI screens
+# land in the Xcode project before Fastlane archives TestFlight.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-DESIGN_OWNER="${GLUCOSE_GUARD_DESIGN_OWNER:-iDustbin}"
-DESIGN_REPO="${GLUCOSE_GUARD_DESIGN_REPO:-glucoseguard}"
-DESIGN_REF="${GLUCOSE_GUARD_DESIGN_REF:-main}"
 LOCAL_DESIGN="${GLUCOSE_GUARD_DESIGN_PATH:-}"
-CLONE_DIR=""
-
-cleanup() {
-  if [[ -n "${CLONE_DIR}" && -d "${CLONE_DIR}" ]]; then
-    rm -rf "${CLONE_DIR}"
-  fi
-}
-trap cleanup EXIT
 
 resolve_source() {
   if [[ -n "${LOCAL_DESIGN}" ]]; then
@@ -29,44 +18,13 @@ resolve_source() {
   fi
 
   local bundled="${ROOT}/glucose-guard-design"
-  CLONE_DIR="$(mktemp -d)"
-  export GIT_TERMINAL_PROMPT=0
-
-  echo "Cloning ${DESIGN_OWNER}/${DESIGN_REPO}@${DESIGN_REF}" >&2
-  set +e
-  if [[ -n "${GH_PAT:-}" ]]; then
-    git clone --depth 1 --branch "${DESIGN_REF}" \
-      "https://x-access-token:${GH_PAT}@github.com/${DESIGN_OWNER}/${DESIGN_REPO}.git" \
-      "${CLONE_DIR}"
-  else
-    git clone --depth 1 --branch "${DESIGN_REF}" \
-      "https://github.com/${DESIGN_OWNER}/${DESIGN_REPO}.git" \
-      "${CLONE_DIR}"
-  fi
-  local clone_status=$?
-  set -e
-
-  if [[ "${clone_status}" -eq 0 && -d "${CLONE_DIR}/ios" ]]; then
-    echo "Cloned https://github.com/${DESIGN_OWNER}/${DESIGN_REPO} @ $(git -C "${CLONE_DIR}" rev-parse --short HEAD)" >&2
-    printf '%s\n' "${CLONE_DIR}"
-    return
-  fi
-
-  # In CI the design repo must be used. Local Xcode can fall back to the bundle.
-  if [[ -n "${GH_PAT:-}" ]]; then
-    echo "Failed to clone https://github.com/${DESIGN_OWNER}/${DESIGN_REPO}. Not using the bundled fallback in CI." >&2
-    exit 1
-  fi
-
-  echo "Remote ${DESIGN_OWNER}/${DESIGN_REPO} is not available; using bundled glucose-guard-design." >&2
-  rm -rf "${CLONE_DIR}"
-  CLONE_DIR=""
   if [[ -d "${bundled}/ios" ]]; then
+    echo "Using Xcode design from ${bundled}" >&2
     printf '%s\n' "${bundled}"
     return
   fi
 
-  echo "No Glucose Guard design source found. Create iDustbin/glucoseguard or set GLUCOSE_GUARD_DESIGN_PATH." >&2
+  echo "No glucose-guard-design/ios tree found in this LoopWorkspace checkout." >&2
   exit 1
 }
 
@@ -212,4 +170,4 @@ if [[ ! -d "${ROOT}/Loop/LoopUI" ]]; then
 fi
 python3 "${THEME_SCRIPT}" --loop-root "${ROOT}/Loop" --design-root "${SRC}"
 
-echo "Glucose Guard branding applied from ${SRC}"
+echo "Glucose Guard Xcode design applied from ${SRC}"

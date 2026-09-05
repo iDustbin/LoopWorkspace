@@ -6,8 +6,8 @@ and native Xcode/SwiftUI screens from the Figma mobile theme
 
 Step 1 is **iOS only**. The Loop fork
 [iDustbin/LoopWorkspace](https://github.com/iDustbin/LoopWorkspace) syncs from
-[LoopKit/LoopWorkspace](https://github.com/LoopKit/LoopWorkspace). GitHub Actions
-then apply `ios/` and publish to the existing TestFlight account.
+[LoopKit/LoopWorkspace](https://github.com/LoopKit/LoopWorkspace). **4. Build Loop**
+applies `ios/` in the Xcode checkout, then Fastlane uploads TestFlight.
 
 ## Layout
 
@@ -30,6 +30,4 @@ GLUCOSE_GUARD_DESIGN_PATH=/path/to/glucose-guard-design \
   ./Scripts/apply_glucose_guard_branding.sh
 ```
 
-The GitHub source of truth is [iDustbin/glucoseguard](https://github.com/iDustbin/glucoseguard).
-This folder is the copy that Bootstrap publishes there, and the local fallback
-if the remote is not cloned yet.
+This folder is the Xcode design source. **4. Build Loop** applies it before Fastlane/TestFlight.

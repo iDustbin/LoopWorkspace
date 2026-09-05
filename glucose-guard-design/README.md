@@ -1,12 +1,13 @@
 # Glucose Guard Design
 
-iOS branding for **Glucose Guard**: logo, color tokens, and Loop override app icons.
+iOS branding for **Glucose Guard**: logo, color tokens, Loop override app icons,
+and native Xcode/SwiftUI screens from the Figma mobile theme
+(Today / Learning / Healthway / +, CGM and pump detail, A1C).
 
 Step 1 is **iOS only**. The Loop fork
 [iDustbin/LoopWorkspace](https://github.com/iDustbin/LoopWorkspace) syncs from
 [LoopKit/LoopWorkspace](https://github.com/LoopKit/LoopWorkspace). GitHub Actions
-then apply `ios/` (icons + display name) and publish to the existing TestFlight
-account.
+then apply `ios/` and publish to the existing TestFlight account.
 
 ## Layout
 
@@ -29,5 +30,6 @@ GLUCOSE_GUARD_DESIGN_PATH=/path/to/glucose-guard-design \
   ./Scripts/apply_glucose_guard_branding.sh
 ```
 
-Until `iDustbin/glucose-guard-design` exists as its own GitHub repo, this tree
-stays bundled inside the Loop fork so TestFlight still gets the Glucose Guard icon.
+The GitHub source of truth is [iDustbin/glucoseguard](https://github.com/iDustbin/glucoseguard).
+This folder is the copy that Bootstrap publishes there, and the local fallback
+if the remote is not cloned yet.

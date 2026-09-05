@@ -1,0 +1,362 @@
+// GLUCOSE_GUARD_XCODE_DESIGN
+// Native SwiftUI screens matching the Figma mobile theme.
+
+private enum GlucoseGuardTheme {
+    static let red = Color(red: 0.957, green: 0.200, blue: 0.235)
+    static let green = Color(red: 0.133, green: 0.773, blue: 0.369)
+    static let ink = Color(red: 0.039, green: 0.039, blue: 0.039)
+    static let surface = Color(red: 0.090, green: 0.090, blue: 0.090)
+    static let muted = Color(red: 0.639, green: 0.639, blue: 0.639)
+    static let cardRadius: CGFloat = 18
+}
+
+struct GlucoseGuardTabBar: View {
+    var onToday: () -> Void
+    var onLearning: () -> Void
+    var onHealthway: () -> Void
+    var onAdd: () -> Void
+
+    var body: some View {
+        HStack(alignment: .bottom, spacing: 0) {
+            tabButton("Today", systemName: "sun.max.fill", action: onToday)
+            tabButton("Learning", systemName: "rectangle.stack.fill", action: onLearning)
+            tabButton("Healthway", systemName: "heart.text.square.fill", action: onHealthway)
+            Button(action: onAdd) {
+                ZStack {
+                    Circle()
+                        .fill(GlucoseGuardTheme.red)
+                        .frame(width: 58, height: 58)
+                        .shadow(color: GlucoseGuardTheme.red.opacity(0.35), radius: 8, y: 3)
+                    Image(systemName: "plus")
+                        .font(.system(size: 26, weight: .bold))
+                        .foregroundColor(.white)
+                }
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(Text("Add"))
+            .padding(.bottom, 2)
+        }
+        .padding(.horizontal, 10)
+        .padding(.top, 10)
+        .padding(.bottom, 14)
+        .background(GlucoseGuardTheme.ink.edgesIgnoringSafeArea(.bottom))
+    }
+
+    private func tabButton(_ title: String, systemName: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            VStack(spacing: 4) {
+                Image(systemName: systemName)
+                    .font(.system(size: 18, weight: .semibold))
+                Text(title)
+                    .font(.caption2.weight(.semibold))
+            }
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+struct GlucoseGuardScreenChrome<Content: View>: View {
+    let title: String
+    let content: Content
+
+    init(_ title: String, @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.content = content()
+    }
+
+    var body: some View {
+        ZStack {
+            GlucoseGuardTheme.ink.ignoresSafeArea()
+            VStack(alignment: .leading, spacing: 16) {
+                HStack(spacing: 10) {
+                    Image("glucose_guard_mark", bundle: Bundle(for: StatusBarHUDView.self))
+                        .resizable()
+                        .frame(width: 36, height: 36)
+                        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    Text(title)
+                        .font(.title2.bold())
+                        .foregroundColor(.white)
+                    Spacer()
+                }
+                content
+                Spacer(minLength: 0)
+            }
+            .padding(20)
+        }
+    }
+}
+
+struct GlucoseGuardCard<Content: View>: View {
+    let content: Content
+
+    init(@ViewBuilder content: () -> Content) {
+        self.content = content()
+    }
+
+    var body: some View {
+        content
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(GlucoseGuardTheme.surface)
+            .clipShape(RoundedRectangle(cornerRadius: GlucoseGuardTheme.cardRadius, style: .continuous))
+    }
+}
+
+struct GlucoseGuardProgressBar: View {
+    let progress: Double
+    var tint: Color = GlucoseGuardTheme.red
+
+    var body: some View {
+        GeometryReader { geo in
+            ZStack(alignment: .leading) {
+                Capsule().fill(Color.white.opacity(0.12))
+                Capsule()
+                    .fill(tint)
+                    .frame(width: max(8, geo.size.width * CGFloat(min(max(progress, 0), 1))))
+            }
+        }
+        .frame(height: 8)
+    }
+}
+
+struct GlucoseGuardCGMDetailView: View {
+    let lastReading: String
+    let minutesAgo: String
+    let remainingDays: Double
+    let sensorLifeDays: Double
+    let average: String
+    let onOpenCGM: () -> Void
+
+    var body: some View {
+        GlucoseGuardScreenChrome("CGM") {
+            GlucoseGuardCard {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Image(systemName: "waveform.path.ecg")
+                            .foregroundColor(GlucoseGuardTheme.red)
+                        Text(String(format: NSLocalizedString("Sensor expires in %.0f days", comment: "CGM remaining life"), remainingDays))
+                            .font(.headline)
+                            .foregroundColor(.white)
+                    }
+                    GlucoseGuardProgressBar(progress: 1 - (remainingDays / max(sensorLifeDays, 1)))
+                    Text(String(format: NSLocalizedString("%.0f of %.0f days remaining", comment: "CGM life caption"), remainingDays, sensorLifeDays))
+                        .font(.footnote)
+                        .foregroundColor(GlucoseGuardTheme.muted)
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Last Reading")
+                                .font(.caption)
+                                .foregroundColor(GlucoseGuardTheme.muted)
+                            Text(lastReading)
+                                .font(.title.bold())
+                                .foregroundColor(.white)
+                        }
+                        Spacer()
+                        Label(minutesAgo, systemImage: "clock")
+                            .foregroundColor(GlucoseGuardTheme.red)
+                    }
+                    HStack {
+                        Text("AVG")
+                            .foregroundColor(GlucoseGuardTheme.muted)
+                        Spacer()
+                        Text(average)
+                            .foregroundColor(.white)
+                            .font(.headline)
+                    }
+                }
+            }
+            Button(action: onOpenCGM) {
+                Text("LibreLinkUp, Dexcom Share, or CGM settings")
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(GlucoseGuardTheme.red)
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            }
+            .padding(.top, 8)
+        }
+    }
+}
+
+struct GlucoseGuardPumpDetailView: View {
+    let pumpName: String
+    let remainingDays: Double
+    let podLifeDays: Double
+    let basal: String
+    let remainingInsulin: String
+    let onChangeBolus: () -> Void
+    let onOpenPump: () -> Void
+
+    var body: some View {
+        GlucoseGuardScreenChrome(pumpName) {
+            GlucoseGuardCard {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text(String(format: NSLocalizedString("Pod expires in %.1f days", comment: "Pump remaining life"), remainingDays))
+                        .font(.headline)
+                        .foregroundColor(.white)
+                    GlucoseGuardProgressBar(progress: 1 - (remainingDays / max(podLifeDays, 1)), tint: .orange)
+                    Text(String(format: NSLocalizedString("%.1f of %.0f days remaining", comment: "Pump life caption"), remainingDays, podLifeDays))
+                        .font(.footnote)
+                        .foregroundColor(GlucoseGuardTheme.muted)
+                    HStack {
+                        VStack(alignment: .leading) {
+                            Text("Planned basal")
+                                .font(.caption)
+                                .foregroundColor(GlucoseGuardTheme.muted)
+                            Text(basal)
+                                .font(.headline)
+                                .foregroundColor(.white)
+                        }
+                        Spacer()
+                        VStack(alignment: .trailing) {
+                            Text("Remaining insulin")
+                                .font(.caption)
+                                .foregroundColor(GlucoseGuardTheme.muted)
+                            Text(remainingInsulin)
+                                .font(.headline)
+                                .foregroundColor(.orange)
+                        }
+                    }
+                }
+            }
+            Button(action: onChangeBolus) {
+                Text("Current bolus — change")
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(GlucoseGuardTheme.red)
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            }
+            Button(action: onOpenPump) {
+                Text("Open pump settings")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+            }
+        }
+    }
+}
+
+struct GlucoseGuardLearningView: View {
+    let displayUnit: HKUnit
+    let loader: (Date, @escaping ([Double]) -> Void) -> Void
+
+    var body: some View {
+        GlucoseGuardStatisticsView(displayUnit: displayUnit, loader: loader)
+            .background(GlucoseGuardTheme.ink.ignoresSafeArea())
+    }
+}
+
+struct GlucoseGuardHealthwayView: View {
+    let currentGlucose: String
+    let a1c: String
+    let average: String
+    let tir: String
+    let points: [Double]
+
+    @State private var range = 1
+
+    var body: some View {
+        ZStack {
+            Color(red: 0.980, green: 0.980, blue: 0.980).ignoresSafeArea()
+            VStack(alignment: .leading, spacing: 16) {
+                HStack(spacing: 10) {
+                    Image("glucose_guard_mark", bundle: Bundle(for: StatusBarHUDView.self))
+                        .resizable()
+                        .frame(width: 36, height: 36)
+                        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    Text("Glucose Values")
+                        .font(.title2.bold())
+                    Spacer()
+                }
+                Picker("Range", selection: $range) {
+                    Text("Day").tag(1)
+                    Text("Week").tag(7)
+                    Text("Month").tag(30)
+                    Text("Year").tag(365)
+                }
+                .pickerStyle(.segmented)
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack {
+                        Text("Glucose")
+                            .foregroundColor(GlucoseGuardTheme.muted)
+                        Spacer()
+                        Text(currentGlucose)
+                            .foregroundColor(GlucoseGuardTheme.green)
+                            .font(.headline)
+                    }
+                    GlucoseGuardSparkline(points: points)
+                        .frame(height: 160)
+                    HStack {
+                        metric("A1C", a1c)
+                        metric("AVG", average)
+                        metric("TIR", tir)
+                    }
+                }
+                .padding(16)
+                .background(Color.white)
+                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .shadow(color: Color.black.opacity(0.06), radius: 8, y: 3)
+                Spacer()
+            }
+            .padding(20)
+        }
+    }
+
+    private func metric(_ title: String, _ value: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.caption)
+                .foregroundColor(GlucoseGuardTheme.muted)
+            Text(value)
+                .font(.headline)
+                .foregroundColor(GlucoseGuardTheme.red)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+struct GlucoseGuardSparkline: View {
+    let points: [Double]
+
+    var body: some View {
+        GeometryReader { geo in
+            let values = points.isEmpty ? [90, 110, 95, 130, 100] : points
+            let minV = (values.min() ?? 0) - 10
+            let maxV = (values.max() ?? 1) + 10
+            let span = max(maxV - minV, 1)
+            Path { path in
+                for (index, value) in values.enumerated() {
+                    let x = geo.size.width * CGFloat(index) / CGFloat(max(values.count - 1, 1))
+                    let y = geo.size.height * (1 - CGFloat((value - minV) / span))
+                    if index == 0 {
+                        path.move(to: CGPoint(x: x, y: geo.size.height))
+                        path.addLine(to: CGPoint(x: x, y: y))
+                    } else {
+                        path.addLine(to: CGPoint(x: x, y: y))
+                    }
+                }
+                path.addLine(to: CGPoint(x: geo.size.width, y: geo.size.height))
+                path.closeSubpath()
+            }
+            .fill(GlucoseGuardTheme.red.opacity(0.28))
+            Path { path in
+                for (index, value) in values.enumerated() {
+                    let x = geo.size.width * CGFloat(index) / CGFloat(max(values.count - 1, 1))
+                    let y = geo.size.height * (1 - CGFloat((value - minV) / span))
+                    if index == 0 {
+                        path.move(to: CGPoint(x: x, y: y))
+                    } else {
+                        path.addLine(to: CGPoint(x: x, y: y))
+                    }
+                }
+            }
+            .stroke(GlucoseGuardTheme.red, lineWidth: 2)
+        }
+    }
+}

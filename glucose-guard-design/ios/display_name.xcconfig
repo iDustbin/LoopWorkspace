@@ -1,3 +1,4 @@
 // Applied by Scripts/apply_glucose_guard_branding.sh in LoopWorkspace.
+// This is the Home Screen name (not the TestFlight / App Store Connect listing).
 // Do not put team IDs, API keys, or signing secrets in this file.
 MAIN_APP_DISPLAY_NAME = GlucoseGuard

@@ -1,0 +1,126 @@
+// GLUCOSE_GUARD_THEME statistics
+
+private struct GlucoseGuardStatisticsView: View {
+    let displayUnit: HKUnit
+    let loader: (Date, @escaping ([Double]) -> Void) -> Void
+
+    @State private var periodDays = 7
+    @State private var valuesMgdl: [Double] = []
+    @State private var loading = true
+
+    private let periods = [3, 7, 30, 90]
+
+    var body: some View {
+        List {
+            Section(header: Text(NSLocalizedString("Period", comment: "Statistics period header"))) {
+                Picker(NSLocalizedString("Period", comment: "Statistics period picker"), selection: $periodDays) {
+                    ForEach(periods, id: \.self) { days in
+                        Text("\(days)d").tag(days)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .onChange(of: periodDays) { _ in
+                    reload()
+                }
+            }
+
+            Section(header: Text(NSLocalizedString("Glucose", comment: "Statistics glucose header"))) {
+                metricRow(
+                    title: "AVG",
+                    value: formattedAverage,
+                    detail: NSLocalizedString("Average glucose for the selected days.", comment: "AVG help")
+                )
+                metricRow(
+                    title: "SD",
+                    value: formattedSD,
+                    detail: NSLocalizedString("Standard deviation of glucose.", comment: "SD help")
+                )
+                metricRow(
+                    title: "A1C",
+                    value: formattedA1C,
+                    detail: NSLocalizedString("Estimated A1C from mean glucose (GMI formula).", comment: "A1C help")
+                )
+            }
+
+            Section(header: Text(NSLocalizedString("Time in range", comment: "TIR section header"))) {
+                metricRow(title: "TIR", value: formattedPercent(inRange), detail: NSLocalizedString("70–180 mg/dL.", comment: "TIR help"))
+                metricRow(title: "TBR", value: formattedPercent(belowRange), detail: NSLocalizedString("Below 70 mg/dL.", comment: "TBR help"))
+                metricRow(title: "TAR", value: formattedPercent(aboveRange), detail: NSLocalizedString("Above 180 mg/dL.", comment: "TAR help"))
+            }
+        }
+        .listStyle(.insetGrouped)
+        .overlay {
+            if loading {
+                ProgressView()
+            } else if valuesMgdl.isEmpty {
+                Text(NSLocalizedString("No glucose values in this period.", comment: "Empty statistics"))
+                    .foregroundColor(.secondary)
+            }
+        }
+        .onAppear(perform: reload)
+    }
+
+    private func metricRow(title: String, value: String, detail: String) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text(title)
+                    .font(.headline)
+                Spacer()
+                Text(value)
+                    .font(.title2.monospacedDigit())
+                    .foregroundColor(Color(red: 0.957, green: 0.200, blue: 0.235))
+            }
+            Text(detail)
+                .font(.footnote)
+                .foregroundColor(.secondary)
+        }
+        .padding(.vertical, 4)
+    }
+
+    private var averageMgdl: Double? {
+        guard !valuesMgdl.isEmpty else { return nil }
+        return valuesMgdl.reduce(0, +) / Double(valuesMgdl.count)
+    }
+
+    private var formattedAverage: String {
+        guard let averageMgdl else { return "—" }
+        let quantity = HKQuantity(unit: .milligramsPerDeciliter, doubleValue: averageMgdl)
+        return String(format: "%.1f %@", quantity.doubleValue(for: displayUnit), displayUnit.unitString)
+    }
+
+    private var formattedSD: String {
+        guard let averageMgdl, valuesMgdl.count > 1 else { return "—" }
+        let variance = valuesMgdl.reduce(0) { $0 + pow($1 - averageMgdl, 2) } / Double(valuesMgdl.count)
+        let quantity = HKQuantity(unit: .milligramsPerDeciliter, doubleValue: sqrt(variance))
+        return String(format: "%.1f %@", quantity.doubleValue(for: displayUnit), displayUnit.unitString)
+    }
+
+    private var formattedA1C: String {
+        guard let averageMgdl else { return "—" }
+        let a1c = 3.31 + 0.02392 * averageMgdl
+        return String(format: "%.1f%%", a1c)
+    }
+
+    private var inRange: Double? { ratio { $0 >= 70 && $0 <= 180 } }
+    private var belowRange: Double? { ratio { $0 < 70 } }
+    private var aboveRange: Double? { ratio { $0 > 180 } }
+
+    private func ratio(_ predicate: (Double) -> Bool) -> Double? {
+        guard !valuesMgdl.isEmpty else { return nil }
+        return Double(valuesMgdl.filter(predicate).count) / Double(valuesMgdl.count)
+    }
+
+    private func formattedPercent(_ value: Double?) -> String {
+        guard let value else { return "—" }
+        return String(format: "%.0f%%", value * 100)
+    }
+
+    private func reload() {
+        loading = true
+        let start = Calendar.current.date(byAdding: .day, value: -periodDays, to: Date()) ?? Date()
+        loader(start) { samples in
+            valuesMgdl = samples
+            loading = false
+        }
+    }
+}

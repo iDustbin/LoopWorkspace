@@ -96,9 +96,10 @@ jobs:
 
       # This syncs any target branch to upstream branch of the same name
       - name: Sync upstream changes
-        if: | # do not run the upstream sync action on the upstream repository
+        if: | # skip on feature branches so a TestFlight test build is not reset to LoopKit
           steps.workflow-permission.outputs.has_permission == 'true' &&
-          vars.SCHEDULED_SYNC != 'false' && github.repository_owner != 'LoopKit'
+          vars.SCHEDULED_SYNC != 'false' && github.repository_owner != 'LoopKit' &&
+          (github.ref_name == 'main' || github.ref_name == 'dev')
         id: sync
         uses: aormsby/Fork-Sync-With-Upstream-action@v3.4.2
         with:
@@ -190,8 +191,8 @@ jobs:
 
           # LoopWorkspace patches
           # -applies any patches located in the LoopWorkspace/patches/ directory
-          if $(ls ./patches/* &> /dev/null); then
-          git apply ./patches/* --allow-empty -v --whitespace=fix
+          if $(ls ./patches/*.patch &> /dev/null); then
+          git apply ./patches/*.patch --allow-empty -v --whitespace=fix
           fi
 
           # Submodule Loop patches:
@@ -215,7 +216,7 @@ jobs:
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
           GLUCOSE_GUARD_DESIGN_OWNER: iDustbin
-          GLUCOSE_GUARD_DESIGN_REPO: glucose-guard-design
+          GLUCOSE_GUARD_DESIGN_REPO: glucoseguard
           GLUCOSE_GUARD_DESIGN_REF: main
         run: ./Scripts/apply_glucose_guard_branding.sh
 

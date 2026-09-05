@@ -156,12 +156,7 @@
     private func presentGlucoseGuardPumpDetail() {
         let used = deviceManager.pumpLifecycleProgress?.percentComplete ?? 0
         let remaining = max(0, (1 - used) * 3)
-        let name: String
-        if let pump = deviceManager.pumpManager {
-            name = type(of: pump).localizedTitle
-        } else {
-            name = "Insulin Pump"
-        }
+        let name = deviceManager.pumpManager?.localizedTitle ?? "Insulin Pump"
         let basal = hudView?.pumpStatusHUD.basalRateHUD.accessibilityValue ?? "—"
         presentGlucoseGuardDesign(
             GlucoseGuardPumpDetailView(

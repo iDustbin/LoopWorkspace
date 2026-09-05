@@ -9,6 +9,7 @@ on:
     paths:
       - "glucose-guard-design/**"
       - "Scripts/publish_glucose_guard_design.sh"
+      - "Scripts/apply_glucose_guard_branding.sh"
       - ".github/workflows/bootstrap_glucose_guard.yml"
 
 permissions:

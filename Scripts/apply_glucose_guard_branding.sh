@@ -29,23 +29,33 @@ resolve_source() {
   fi
 
   local bundled="${ROOT}/glucose-guard-design"
-  local url="https://github.com/${DESIGN_OWNER}/${DESIGN_REPO}.git"
   CLONE_DIR="$(mktemp -d)"
+  export GIT_TERMINAL_PROMPT=0
 
   echo "Cloning ${DESIGN_OWNER}/${DESIGN_REPO}@${DESIGN_REF}" >&2
   set +e
   if [[ -n "${GH_PAT:-}" ]]; then
-    git -c "http.extraHeader=Authorization: Bearer ${GH_PAT}" \
-      clone --depth 1 --branch "${DESIGN_REF}" "${url}" "${CLONE_DIR}"
+    git clone --depth 1 --branch "${DESIGN_REF}" \
+      "https://x-access-token:${GH_PAT}@github.com/${DESIGN_OWNER}/${DESIGN_REPO}.git" \
+      "${CLONE_DIR}"
   else
-    git clone --depth 1 --branch "${DESIGN_REF}" "${url}" "${CLONE_DIR}"
+    git clone --depth 1 --branch "${DESIGN_REF}" \
+      "https://github.com/${DESIGN_OWNER}/${DESIGN_REPO}.git" \
+      "${CLONE_DIR}"
   fi
   local clone_status=$?
   set -e
 
   if [[ "${clone_status}" -eq 0 && -d "${CLONE_DIR}/ios" ]]; then
+    echo "Cloned https://github.com/${DESIGN_OWNER}/${DESIGN_REPO} @ $(git -C "${CLONE_DIR}" rev-parse --short HEAD)" >&2
     printf '%s\n' "${CLONE_DIR}"
     return
+  fi
+
+  # In CI the design repo must be used. Local Xcode can fall back to the bundle.
+  if [[ -n "${GH_PAT:-}" ]]; then
+    echo "Failed to clone https://github.com/${DESIGN_OWNER}/${DESIGN_REPO}. Not using the bundled fallback in CI." >&2
+    exit 1
   fi
 
   echo "Remote ${DESIGN_OWNER}/${DESIGN_REPO} is not available; using bundled glucose-guard-design." >&2

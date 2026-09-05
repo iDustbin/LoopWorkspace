@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Create or update iDustbin/glucose-guard-design from the bundled branding tree.
+# Create or update iDustbin/glucoseguard from the bundled branding tree.
 # Uses GH_PAT (never printed). Intended for GitHub Actions.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 OWNER="${GLUCOSE_GUARD_DESIGN_OWNER:-iDustbin}"
-REPO="${GLUCOSE_GUARD_DESIGN_REPO:-glucose-guard-design}"
+REPO="${GLUCOSE_GUARD_DESIGN_REPO:-glucoseguard}"
 SRC="${ROOT}/glucose-guard-design"
 
 if [[ -z "${GH_PAT:-}" ]]; then
@@ -20,6 +20,7 @@ fi
 
 export GH_TOKEN="${GH_PAT}"
 export GH_PROMPT_DISABLED=1
+export GIT_TERMINAL_PROMPT=0
 
 if ! gh repo view "${OWNER}/${REPO}" >/dev/null 2>&1; then
   echo "Creating ${OWNER}/${REPO}"
@@ -41,7 +42,8 @@ git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 git add -A
 git commit -m "sync iOS branding from LoopWorkspace"
 
-git -c "http.extraHeader=Authorization: Bearer ${GH_PAT}" \
-  push --force "https://github.com/${OWNER}/${REPO}.git" main
+# Token only in the remote URL for this process; do not echo the URL.
+git remote add origin "https://x-access-token:${GH_PAT}@github.com/${OWNER}/${REPO}.git"
+git push --force origin main
 
-echo "Published branding to ${OWNER}/${REPO}"
+echo "Published branding to https://github.com/${OWNER}/${REPO}"

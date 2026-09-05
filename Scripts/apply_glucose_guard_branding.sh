@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Pull Glucose Guard branding from iDustbin/glucose-guard-design and apply
+# Pull Glucose Guard branding from iDustbin/glucoseguard and apply
 # it to this LoopWorkspace checkout. Used after upstream LoopKit sync so
 # icons and the display name survive a fork reset.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DESIGN_OWNER="${GLUCOSE_GUARD_DESIGN_OWNER:-iDustbin}"
-DESIGN_REPO="${GLUCOSE_GUARD_DESIGN_REPO:-glucose-guard-design}"
+DESIGN_REPO="${GLUCOSE_GUARD_DESIGN_REPO:-glucoseguard}"
 DESIGN_REF="${GLUCOSE_GUARD_DESIGN_REF:-main}"
 LOCAL_DESIGN="${GLUCOSE_GUARD_DESIGN_PATH:-}"
 CLONE_DIR=""
@@ -56,7 +56,7 @@ resolve_source() {
     return
   fi
 
-  echo "No Glucose Guard design source found. Create iDustbin/glucose-guard-design or set GLUCOSE_GUARD_DESIGN_PATH." >&2
+  echo "No Glucose Guard design source found. Create iDustbin/glucoseguard or set GLUCOSE_GUARD_DESIGN_PATH." >&2
   exit 1
 }
 

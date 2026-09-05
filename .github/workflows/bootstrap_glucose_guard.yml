@@ -32,7 +32,9 @@ jobs:
             exit 1
           fi
 
-      - name: Publish iDustbin/glucose-guard-design
+      - name: Publish iDustbin/glucoseguard
+        env:
+          GLUCOSE_GUARD_DESIGN_REPO: glucoseguard
         run: ./Scripts/publish_glucose_guard_design.sh
 
       - name: Enable and start 4. Build Loop
@@ -41,4 +43,4 @@ jobs:
           gh workflow enable "4. Build Loop" || true
           gh workflow run "4. Build Loop" --ref "${GITHUB_REF_NAME}"
           echo "Dispatched 4. Build Loop on ${GITHUB_REF_NAME}"
-          echo "That job applies icons + GlucoseGuard name from iDustbin/glucose-guard-design, then Fastlane/TestFlight."
+          echo "That job applies icons + GlucoseGuard name from iDustbin/glucoseguard, then Fastlane/TestFlight."

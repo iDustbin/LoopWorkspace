@@ -29,5 +29,6 @@ GLUCOSE_GUARD_DESIGN_PATH=/path/to/glucose-guard-design \
   ./Scripts/apply_glucose_guard_branding.sh
 ```
 
-Until `iDustbin/glucose-guard-design` exists as its own GitHub repo, this tree
-stays bundled inside the Loop fork so TestFlight still gets the Glucose Guard icon.
+The GitHub source of truth is [iDustbin/glucoseguard](https://github.com/iDustbin/glucoseguard).
+This folder is the copy that Bootstrap publishes there, and the local fallback
+if the remote is not cloned yet.

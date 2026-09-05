@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Glucose Guard">
+  <rect width="512" height="512" rx="110" fill="#F4333C"/>
+  <g fill="#FFFFFF">
+    <rect x="214" y="72" width="84" height="72" rx="10"/>
+    <circle cx="238" cy="104" r="9" fill="#F4333C"/>
+    <circle cx="274" cy="104" r="9" fill="#F4333C"/>
+    <rect x="214" y="144" width="84" height="296" rx="18"/>
+    <rect x="88" y="214" width="336" height="84" rx="18"/>
+    <path d="M196 236 L256 300 L316 236 L316 278 L256 336 L196 278 Z" fill="#F4333C"/>
+  </g>
+</svg>

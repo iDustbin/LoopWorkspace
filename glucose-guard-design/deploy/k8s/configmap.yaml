@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: glucose-guard-web
+  namespace: glucose-guard
+  labels:
+    app.kubernetes.io/name: glucose-guard-web
+data:
+  APP_NAME: Glucose Guard
+  STEP: "1-branding-shell"

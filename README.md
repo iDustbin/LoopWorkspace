@@ -1,4 +1,26 @@
-# LoopWorkspace
+# LoopWorkspace (Glucose Guard)
+
+This fork builds **Glucose Guard** on top of [LoopKit/LoopWorkspace](https://github.com/LoopKit/LoopWorkspace).
+
+GitHub Actions keep this repository in sync with upstream Loop, then pull branding
+(logo, app icons, display name) from
+[iDustbin/glucose-guard-design](https://github.com/iDustbin/glucose-guard-design)
+when that repo exists. Until then the same tree is bundled at
+`glucose-guard-design/` so TestFlight builds still get the Glucose Guard icon.
+Create the empty GitHub repo under `iDustbin` and push that folder as the
+repository root to split design/web/k8s out of this fork.
+
+For a local Xcode icon/name refresh after an upstream pull:
+
+```
+./Scripts/apply_glucose_guard_branding.sh
+```
+
+Or apply a local checkout of the design repo:
+
+```
+GLUCOSE_GUARD_DESIGN_PATH=/path/to/glucose-guard-design ./Scripts/apply_glucose_guard_branding.sh
+```
 
 The Loop app can be built using GitHub in a browser on any computer or using a Mac with Xcode.
 

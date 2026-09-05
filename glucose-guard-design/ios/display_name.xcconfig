@@ -1,0 +1,3 @@
+// Applied by Scripts/apply_glucose_guard_branding.sh in LoopWorkspace.
+// Do not put team IDs, API keys, or signing secrets in this file.
+MAIN_APP_DISPLAY_NAME = GlucoseGuard

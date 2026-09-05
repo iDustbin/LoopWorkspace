@@ -2,13 +2,11 @@
 
 This fork builds **Glucose Guard** on top of [LoopKit/LoopWorkspace](https://github.com/LoopKit/LoopWorkspace).
 
-GitHub Actions keep this repository in sync with upstream Loop, then pull branding
-(logo, app icons, display name) from
+This step is **iOS only**: GitHub Actions sync from upstream Loop, apply Glucose
+Guard icons and the display name, then publish to the existing TestFlight
+account. Branding lives in `glucose-guard-design/` (and later in
 [iDustbin/glucose-guard-design](https://github.com/iDustbin/glucose-guard-design)
-when that repo exists. Until then the same tree is bundled at
-`glucose-guard-design/` so TestFlight builds still get the Glucose Guard icon.
-Create the empty GitHub repo under `iDustbin` and push that folder as the
-repository root to split design/web/k8s out of this fork.
+when that repo exists). There is no web or Kubernetes app in this step.
 
 For a local Xcode icon/name refresh after an upstream pull:
 

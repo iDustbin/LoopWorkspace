@@ -1,7 +1,5 @@
 ## Build
 DerivedData/
-glucose-guard-design/web/node_modules/
-glucose-guard-design/web/dist/
 
 ## Settings
 *.pbxuser

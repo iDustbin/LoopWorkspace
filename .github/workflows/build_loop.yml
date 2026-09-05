@@ -212,12 +212,9 @@ jobs:
           # Several patches may be added per submodule.
           # Adding comments (#) may be useful to easily tell the individual patches apart.
 
-      - name: Apply Glucose Guard branding
+      - name: Apply Glucose Guard Xcode design
         env:
-          GH_PAT: ${{ secrets.GH_PAT }}
-          GLUCOSE_GUARD_DESIGN_OWNER: iDustbin
-          GLUCOSE_GUARD_DESIGN_REPO: glucoseguard
-          GLUCOSE_GUARD_DESIGN_REF: main
+          GLUCOSE_GUARD_DESIGN_PATH: ${{ github.workspace }}/glucose-guard-design
         run: ./Scripts/apply_glucose_guard_branding.sh
 
       # Patch Fastlane Match to not print tables

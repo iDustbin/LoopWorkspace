@@ -17,7 +17,7 @@ Branding source of truth for the Loop iOS fork (`iDustbin/LoopWorkspace`).
   - Healthway: Glucose Values dashboard
   - Bolus: current recommended amount plus **Change Bolus**
   - Add CGM overlay lists LibreLinkUp and Dexcom Share
-- GitHub Actions pull this tree after `LoopKit/LoopWorkspace` sync, then Fastlane uploads to the existing TestFlight app
+- **4. Build Loop** applies this tree in the Xcode checkout, then Fastlane uploads TestFlight
 
 ## Not in this step
 

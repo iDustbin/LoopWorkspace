@@ -211,6 +211,14 @@ jobs:
           # Several patches may be added per submodule.
           # Adding comments (#) may be useful to easily tell the individual patches apart.
 
+      - name: Apply Glucose Guard branding
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
+          GLUCOSE_GUARD_DESIGN_OWNER: iDustbin
+          GLUCOSE_GUARD_DESIGN_REPO: glucose-guard-design
+          GLUCOSE_GUARD_DESIGN_REF: main
+        run: ./Scripts/apply_glucose_guard_branding.sh
+
       # Patch Fastlane Match to not print tables
       - name: Patch Match Tables
         run: |

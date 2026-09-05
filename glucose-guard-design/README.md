@@ -1,0 +1,33 @@
+# Glucose Guard Design
+
+iOS branding for **Glucose Guard**: logo, color tokens, and Loop override app icons.
+
+Step 1 is **iOS only**. The Loop fork
+[iDustbin/LoopWorkspace](https://github.com/iDustbin/LoopWorkspace) syncs from
+[LoopKit/LoopWorkspace](https://github.com/LoopKit/LoopWorkspace). GitHub Actions
+then apply `ios/` (icons + display name) and publish to the existing TestFlight
+account.
+
+## Layout
+
+- `branding/` — logo, SVG mark, color tokens
+- `ios/` — `OverrideAssets*.xcassets` and `display_name.xcconfig`
+- `docs/step-1.md` — what ships now vs later
+
+## Apply to a local LoopWorkspace checkout
+
+From the LoopWorkspace root:
+
+```bash
+./Scripts/apply_glucose_guard_branding.sh
+```
+
+Or point at this folder:
+
+```bash
+GLUCOSE_GUARD_DESIGN_PATH=/path/to/glucose-guard-design \
+  ./Scripts/apply_glucose_guard_branding.sh
+```
+
+Until `iDustbin/glucose-guard-design` exists as its own GitHub repo, this tree
+stays bundled inside the Loop fork so TestFlight still gets the Glucose Guard icon.

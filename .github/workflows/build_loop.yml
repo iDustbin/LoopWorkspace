@@ -191,8 +191,8 @@ jobs:
 
           # LoopWorkspace patches
           # -applies any patches located in the LoopWorkspace/patches/ directory
-          if $(ls ./patches/* &> /dev/null); then
-          git apply ./patches/* --allow-empty -v --whitespace=fix
+          if $(ls ./patches/*.patch &> /dev/null); then
+          git apply ./patches/*.patch --allow-empty -v --whitespace=fix
           fi
 
           # Submodule Loop patches:

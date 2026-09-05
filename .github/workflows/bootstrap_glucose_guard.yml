@@ -44,4 +44,4 @@ jobs:
           gh workflow enable "4. Build Loop" || true
           gh workflow run "4. Build Loop" --ref "${GITHUB_REF_NAME}"
           echo "Dispatched 4. Build Loop on ${GITHUB_REF_NAME}"
-          echo "That job applies icons + GlucoseGuard name from iDustbin/glucoseguard, then Fastlane/TestFlight."
+          echo "That job applies icons, GlucoseGuard name, and the Figma mobile theme from iDustbin/glucoseguard, then Fastlane/TestFlight."

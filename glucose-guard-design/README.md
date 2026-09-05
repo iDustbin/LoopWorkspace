@@ -1,12 +1,12 @@
 # Glucose Guard Design
 
-iOS branding for **Glucose Guard**: logo, color tokens, and Loop override app icons.
+iOS branding for **Glucose Guard**: logo, color tokens, Loop override app icons,
+and the Figma mobile theme (HUD ring, Today/+ toolbar, A1C statistics).
 
 Step 1 is **iOS only**. The Loop fork
 [iDustbin/LoopWorkspace](https://github.com/iDustbin/LoopWorkspace) syncs from
 [LoopKit/LoopWorkspace](https://github.com/LoopKit/LoopWorkspace). GitHub Actions
-then apply `ios/` (icons + display name) and publish to the existing TestFlight
-account.
+then apply `ios/` and publish to the existing TestFlight account.
 
 ## Layout
 

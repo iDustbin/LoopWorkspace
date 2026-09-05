@@ -202,4 +202,14 @@ printf '%s\n' \
   > "${ROOT}/Loop/LoopOverride.xcconfig"
 echo "Wrote Loop/LoopOverride.xcconfig (${DISPLAY_NAME})"
 
+THEME_SCRIPT="${SRC}/ios/apply_theme.py"
+if [[ ! -f "${THEME_SCRIPT}" ]]; then
+  THEME_SCRIPT="${ROOT}/glucose-guard-design/ios/apply_theme.py"
+fi
+if [[ ! -d "${ROOT}/Loop/LoopUI" ]]; then
+  echo "Loop submodule is missing; cannot apply Glucose Guard theme" >&2
+  exit 1
+fi
+python3 "${THEME_SCRIPT}" --loop-root "${ROOT}/Loop" --design-root "${SRC}"
+
 echo "Glucose Guard branding applied from ${SRC}"

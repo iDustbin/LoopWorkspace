@@ -1,0 +1,71 @@
+    // GLUCOSE_GUARD_THEME home chrome
+
+    @objc private func presentGlucoseGuardToday() {
+        tableView.setContentOffset(.zero, animated: true)
+    }
+
+    @objc private func presentGlucoseGuardLogSheet() {
+        let sheet = UIAlertController(
+            title: NSLocalizedString("Add", comment: "Title of Glucose Guard add sheet"),
+            message: NSLocalizedString("Insulin bolus, measured glucose, or carbohydrates. The bolus screen shows the current recommended amount and lets you change it.", comment: "Subtitle of Glucose Guard add sheet"),
+            preferredStyle: .actionSheet
+        )
+        sheet.addAction(UIAlertAction(
+            title: NSLocalizedString("Insulin Bolus", comment: "Add-sheet action to change bolus"),
+            style: .default,
+            handler: { [weak self] _ in self?.presentBolusScreen() }
+        ))
+        sheet.addAction(UIAlertAction(
+            title: NSLocalizedString("Glucose Value", comment: "Add-sheet action to enter glucose"),
+            style: .default,
+            handler: { [weak self] _ in self?.presentBolusEntryView(enableManualGlucoseEntry: true) }
+        ))
+        sheet.addAction(UIAlertAction(
+            title: NSLocalizedString("Carbohydrates", comment: "Add-sheet action to enter carbs"),
+            style: .default,
+            handler: { [weak self] _ in self?.userTappedAddCarbs() }
+        ))
+        let preMealAction = UIAlertAction(
+            title: NSLocalizedString("Pre-Meal Targets", comment: "Add-sheet action for pre-meal"),
+            style: .default,
+            handler: { [weak self] _ in self?.togglePreMealMode(confirm: false) }
+        )
+        preMealAction.isEnabled = preMealModeAllowed
+        sheet.addAction(preMealAction)
+        let workoutAction = UIAlertAction(
+            title: NSLocalizedString("Workout Targets", comment: "Add-sheet action for workout"),
+            style: .default,
+            handler: { [weak self] _ in self?.presentCustomPresets(confirm: false) }
+        )
+        workoutAction.isEnabled = workoutModeAllowed
+        sheet.addAction(workoutAction)
+        sheet.addAction(UIAlertAction(title: NSLocalizedString("Cancel", comment: "Cancel add sheet"), style: .cancel))
+        present(sheet, animated: true)
+    }
+
+    @objc private func presentGlucoseGuardStatistics() {
+        let unit = deviceManager.displayGlucosePreference.unit
+        let root = GlucoseGuardStatisticsView(displayUnit: unit) { start, completion in
+            self.deviceManager.glucoseStore.getGlucoseSamples(start: start, end: nil) { result in
+                let values: [Double]
+                switch result {
+                case .success(let samples):
+                    values = samples.map { $0.quantity.doubleValue(for: .milligramsPerDeciliter) }
+                case .failure:
+                    values = []
+                }
+                DispatchQueue.main.async {
+                    completion(values)
+                }
+            }
+        }
+        let hosting = UIHostingController(rootView: root)
+        hosting.title = NSLocalizedString("Statistics", comment: "Title of Glucose Guard statistics")
+        let navigation = UINavigationController(rootViewController: hosting)
+        hosting.navigationItem.rightBarButtonItem = UIBarButtonItem(
+            barButtonSystemItem: .done,
+            target: navigation,
+            action: #selector(UIViewController.dismissWithAnimation)
+        )
+        present(navigation, animated: true)
+    }

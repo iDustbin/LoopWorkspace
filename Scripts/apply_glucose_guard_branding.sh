@@ -194,4 +194,12 @@ print(name)
 PY
 )"
 apply_localized_display_name "${DISPLAY_NAME}"
+
+# Loop.xcconfig includes this file after the default MAIN_APP_DISPLAY_NAME = Loop.
+printf '%s\n' \
+  "// Generated from glucose-guard-design/ios/display_name.xcconfig" \
+  "MAIN_APP_DISPLAY_NAME = ${DISPLAY_NAME}" \
+  > "${ROOT}/Loop/LoopOverride.xcconfig"
+echo "Wrote Loop/LoopOverride.xcconfig (${DISPLAY_NAME})"
+
 echo "Glucose Guard branding applied from ${SRC}"

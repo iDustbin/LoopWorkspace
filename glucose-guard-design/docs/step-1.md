@@ -4,7 +4,8 @@ Branding source of truth for the Loop iOS fork (`iDustbin/LoopWorkspace`).
 
 ## Implemented now
 
-- App name: **GlucoseGuard**
+- App name: **GlucoseGuard** on the Home Screen (rewrites Loop `InfoPlist.xcstrings`,
+  which otherwise keep the localized name “Loop”)
 - Robot-cross logo on brand red (`#F4333C`)
 - iOS and watchOS override app icons
 - GitHub Actions on the Loop fork pull this tree **after** syncing

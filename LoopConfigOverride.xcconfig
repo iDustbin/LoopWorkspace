@@ -3,7 +3,8 @@
 // Override this if you don't want the default com.${DEVELOPMENT_TEAM}.loopkit that loop uses
 // MAIN_APP_BUNDLE_IDENTIFIER = com.myname.loop
 
-// Customize this to change the app name displayed
+// Home-screen name. Source of truth is also
+// glucose-guard-design/ios/display_name.xcconfig (published to iDustbin/glucoseguard).
 MAIN_APP_DISPLAY_NAME = GlucoseGuard
 
 // Customize this to change the URL to open Loop to something other than the display name

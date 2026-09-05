@@ -1,7 +1,8 @@
 # Glucose Guard Design
 
 iOS branding for **Glucose Guard**: logo, color tokens, Loop override app icons,
-and the Figma mobile theme (HUD ring, Today/+ toolbar, A1C statistics).
+and native Xcode/SwiftUI screens from the Figma mobile theme
+(Today / Learning / Healthway / +, CGM and pump detail, A1C).
 
 Step 1 is **iOS only**. The Loop fork
 [iDustbin/LoopWorkspace](https://github.com/iDustbin/LoopWorkspace) syncs from

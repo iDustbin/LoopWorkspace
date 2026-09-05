@@ -1,0 +1,188 @@
+    // GLUCOSE_GUARD_XCODE_DESIGN host
+
+    private var glucoseGuardTabBarHost: UIHostingController<GlucoseGuardTabBar>?
+
+    private func installGlucoseGuardTabBar() {
+        guard glucoseGuardTabBarHost == nil else { return }
+        navigationController?.setToolbarHidden(true, animated: false)
+        let bar = GlucoseGuardTabBar(
+            onToday: { [weak self] in self?.presentGlucoseGuardToday() },
+            onLearning: { [weak self] in self?.presentGlucoseGuardLearning() },
+            onHealthway: { [weak self] in self?.presentGlucoseGuardHealthway() },
+            onAdd: { [weak self] in self?.presentGlucoseGuardLogSheet() }
+        )
+        let host = UIHostingController(rootView: bar)
+        host.view.backgroundColor = .clear
+        addChild(host)
+        host.view.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(host.view)
+        NSLayoutConstraint.activate([
+            host.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            host.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            host.view.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor)
+        ])
+        host.didMove(toParent: self)
+        glucoseGuardTabBarHost = host
+        tableView.contentInset.bottom = 96
+        tableView.verticalScrollIndicatorInsets.bottom = 96
+    }
+
+    private func presentGlucoseGuardDesign<Content: View>(_ root: Content, title: String) {
+        let hosting = UIHostingController(rootView: root)
+        hosting.title = title
+        hosting.view.backgroundColor = UIColor(red: 0.039, green: 0.039, blue: 0.039, alpha: 1)
+        let navigation = UINavigationController(rootViewController: hosting)
+        hosting.navigationItem.rightBarButtonItem = UIBarButtonItem(
+            barButtonSystemItem: .done,
+            target: navigation,
+            action: #selector(UIViewController.dismissWithAnimation)
+        )
+        present(navigation, animated: true)
+    }
+
+    @objc private func presentGlucoseGuardLearning() {
+        let unit = deviceManager.displayGlucosePreference.unit
+        presentGlucoseGuardDesign(
+            GlucoseGuardLearningView(displayUnit: unit) { start, completion in
+                self.deviceManager.glucoseStore.getGlucoseSamples(start: start, end: nil) { result in
+                    let values: [Double]
+                    switch result {
+                    case .success(let samples):
+                        values = samples.map { $0.quantity.doubleValue(for: .milligramsPerDeciliter) }
+                    case .failure:
+                        values = []
+                    }
+                    DispatchQueue.main.async { completion(values) }
+                }
+            },
+            title: NSLocalizedString("Learning", comment: "Learning tab title")
+        )
+    }
+
+    @objc private func presentGlucoseGuardHealthway() {
+        let unit = deviceManager.displayGlucosePreference.unit
+        let latest = deviceManager.glucoseStore.latestGlucose
+        let current = latest.map { deviceManager.displayGlucosePreference.format($0.quantity) } ?? "—"
+        let start = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
+        deviceManager.glucoseStore.getGlucoseSamples(start: start, end: nil) { result in
+            let values: [Double]
+            switch result {
+            case .success(let samples):
+                values = samples.map { $0.quantity.doubleValue(for: .milligramsPerDeciliter) }
+            case .failure:
+                values = []
+            }
+            let average = values.isEmpty ? nil : values.reduce(0, +) / Double(values.count)
+            let a1c = average.map { String(format: "%.1f%%", 3.31 + 0.02392 * $0) } ?? "—"
+            let avgText: String
+            if let average {
+                let quantity = HKQuantity(unit: .milligramsPerDeciliter, doubleValue: average)
+                avgText = String(format: "%.1f %@", quantity.doubleValue(for: unit), unit.unitString)
+            } else {
+                avgText = "—"
+            }
+            let tir: String
+            if values.isEmpty {
+                tir = "—"
+            } else {
+                let inRange = values.filter { $0 >= 70 && $0 <= 180 }.count
+                tir = String(format: "%.0f%%", (Double(inRange) / Double(values.count)) * 100)
+            }
+            let spark = Array(values.suffix(48))
+            DispatchQueue.main.async {
+                self.presentGlucoseGuardDesign(
+                    GlucoseGuardHealthwayView(
+                        currentGlucose: current,
+                        a1c: a1c,
+                        average: avgText,
+                        tir: tir,
+                        points: spark
+                    ),
+                    title: NSLocalizedString("Healthway", comment: "Healthway tab title")
+                )
+            }
+        }
+    }
+
+    private func presentGlucoseGuardCGMDetail() {
+        let unit = deviceManager.displayGlucosePreference.unit
+        let latest = deviceManager.glucoseStore.latestGlucose
+        let reading = latest.map { deviceManager.displayGlucosePreference.format($0.quantity) } ?? "— — —"
+        let minutes: String
+        if let date = latest?.startDate {
+            minutes = String(format: "%.0f min", abs(date.timeIntervalSinceNow) / 60)
+        } else {
+            minutes = "0 min"
+        }
+        let used = deviceManager.cgmLifecycleProgress?.percentComplete ?? 0
+        let remaining = max(0, (1 - used) * 14)
+        let start = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
+        deviceManager.glucoseStore.getGlucoseSamples(start: start, end: nil) { result in
+            let values: [Double]
+            switch result {
+            case .success(let samples):
+                values = samples.map { $0.quantity.doubleValue(for: .milligramsPerDeciliter) }
+            case .failure:
+                values = []
+            }
+            let average: String
+            if values.isEmpty {
+                average = "—"
+            } else {
+                let mean = values.reduce(0, +) / Double(values.count)
+                let quantity = HKQuantity(unit: .milligramsPerDeciliter, doubleValue: mean)
+                average = String(format: "%.1f %@", quantity.doubleValue(for: unit), unit.unitString)
+            }
+            DispatchQueue.main.async {
+                self.presentGlucoseGuardDesign(
+                    GlucoseGuardCGMDetailView(
+                        lastReading: reading,
+                        minutesAgo: minutes,
+                        remainingDays: remaining,
+                        sensorLifeDays: 14,
+                        average: average,
+                        onOpenCGM: {
+                            self.dismiss(animated: true) {
+                                self.executeHUDTapAction(self.deviceManager.didTapOnCGMStatus())
+                            }
+                        }
+                    ),
+                    title: "CGM"
+                )
+            }
+        }
+    }
+
+    private func presentGlucoseGuardPumpDetail() {
+        let used = deviceManager.pumpLifecycleProgress?.percentComplete ?? 0
+        let remaining = max(0, (1 - used) * 3)
+        let name: String
+        if let pump = deviceManager.pumpManager {
+            name = type(of: pump).localizedTitle
+        } else {
+            name = "Insulin Pump"
+        }
+        let basal = hudView?.pumpStatusHUD.basalRateHUD.accessibilityValue ?? "—"
+        presentGlucoseGuardDesign(
+            GlucoseGuardPumpDetailView(
+                pumpName: name,
+                remainingDays: remaining,
+                podLifeDays: 3,
+                basal: basal,
+                remainingInsulin: "—",
+                onChangeBolus: {
+                    self.dismiss(animated: true) {
+                        self.presentBolusScreen()
+                    }
+                },
+                onOpenPump: {
+                    self.dismiss(animated: true) {
+                        if let pumpView = self.hudView?.pumpStatusHUD {
+                            self.executeHUDTapAction(self.deviceManager.didTapOnPumpStatus(pumpView.pumpManagerProvidedHUD))
+                        }
+                    }
+                }
+            ),
+            title: name
+        )
+    }

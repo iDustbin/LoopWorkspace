@@ -6,7 +6,7 @@ Two GitHub pieces, then one iOS build:
 
 1. This repo is already the fork of [LoopKit/LoopWorkspace](https://github.com/LoopKit/LoopWorkspace).
 2. [iDustbin/glucoseguard](https://github.com/iDustbin/glucoseguard) holds logo, icons, the **GlucoseGuard** display name, and the Figma mobile theme. The **Bootstrap Glucose Guard** Action publishes that repo (via `GH_PAT`) and then starts **4. Build Loop**.
-3. Build Loop clones the design repo, applies branding + theme, and uploads to the existing TestFlight app (`com.TEAMID.loopkit.Loop`). No new Apple App ID.
+3. Build Loop clones the design repo, applies branding plus native Xcode/SwiftUI Figma screens, and uploads to the existing TestFlight app (`com.TEAMID.loopkit.Loop`). No new Apple App ID.
 
 Run **Bootstrap Glucose Guard** (or push to this branch) after `GH_PAT` is set. Then install the new TestFlight build to see icon, name, and the Glucose Guard home chrome.
 

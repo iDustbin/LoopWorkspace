@@ -242,6 +242,63 @@ def apply_toolbar(loop: Path) -> None:
     print(f"Inserted Glucose Guard home chrome into {path}")
 
 
+def apply_xcode_design(loop: Path) -> None:
+    path = loop / "Loop" / "View Controllers" / "StatusTableViewController.swift"
+    replace_once(
+        path,
+        "        navigationController?.setToolbarHidden(false, animated: animated)",
+        "        navigationController?.setToolbarHidden(true, animated: animated)",
+    )
+    status_text = path.read_text(encoding="utf-8")
+    if "installGlucoseGuardTabBar()" not in status_text:
+        replace_once(
+            path,
+            "        setupToolbarItems()\n",
+            "        setupToolbarItems()\n        installGlucoseGuardTabBar()\n",
+        )
+    replace_once(
+        path,
+        """    @objc private func pumpStatusTapped(_ sender: UIGestureRecognizer) {
+        if let pumpStatusView = sender.view as? PumpStatusHUDView {
+            executeHUDTapAction(deviceManager.didTapOnPumpStatus(pumpStatusView.pumpManagerProvidedHUD))
+        }
+    }""",
+        """    @objc private func pumpStatusTapped(_ sender: UIGestureRecognizer) {
+        presentGlucoseGuardPumpDetail()
+    }""",
+    )
+    replace_once(
+        path,
+        """    @objc private func cgmStatusTapped( _ sender: UIGestureRecognizer) {
+        executeHUDTapAction(deviceManager.didTapOnCGMStatus())
+    }""",
+        """    @objc private func cgmStatusTapped( _ sender: UIGestureRecognizer) {
+        presentGlucoseGuardCGMDetail()
+    }""",
+    )
+
+    text = path.read_text(encoding="utf-8")
+    if "installGlucoseGuardTabBar" in text and "GLUCOSE_GUARD_XCODE_DESIGN host" not in text:
+        host = Path(__file__).with_name("overlays") / "GlucoseGuardTabBarHost.swift.txt"
+        insert_after = """        present(navigationWrapper, animated: true)
+        deviceManager.analyticsServicesManager.didDisplayBolusScreen()
+    }
+"""
+        if insert_after not in text:
+            die(f"Could not insert Xcode tab bar host into {path}")
+        text = text.replace(insert_after, insert_after + "\n" + host.read_text(encoding="utf-8") + "\n", 1)
+        path.write_text(text, encoding="utf-8")
+        print(f"Inserted Glucose Guard Xcode tab bar host into {path}")
+
+    text = path.read_text(encoding="utf-8")
+    if "GLUCOSE_GUARD_XCODE_DESIGN\n" not in text:
+        design = Path(__file__).with_name("overlays") / "GlucoseGuardXcodeDesign.swift.txt"
+        if not text.endswith("\n"):
+            text += "\n"
+        path.write_text(text + "\n" + design.read_text(encoding="utf-8"), encoding="utf-8")
+        print(f"Appended Glucose Guard Xcode design screens to {path}")
+
+
 def apply_bolus_and_settings(loop: Path) -> None:
     bolus = loop / "Loop" / "Views" / "BolusEntryView.swift"
     replace_once(
@@ -329,6 +386,7 @@ def main() -> None:
     apply_color_fallbacks(loop)
     apply_hud_chrome(loop)
     apply_toolbar(loop)
+    apply_xcode_design(loop)
     apply_bolus_and_settings(loop)
     print("Glucose Guard mobile theme applied")
 

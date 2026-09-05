@@ -1,0 +1,44 @@
+name: Bootstrap Glucose Guard
+run-name: Bootstrap Glucose Guard (${{ github.ref_name }})
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - cursor/glucose-guard-branding-05a7
+    paths:
+      - "glucose-guard-design/**"
+      - "Scripts/publish_glucose_guard_design.sh"
+      - ".github/workflows/bootstrap_glucose_guard.yml"
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  publish-design-and-build:
+    runs-on: ubuntu-latest
+    env:
+      GH_PAT: ${{ secrets.GH_PAT }}
+      GH_TOKEN: ${{ secrets.GH_PAT }}
+    steps:
+      - name: Checkout Loop fork
+        uses: actions/checkout@v5
+
+      - name: Require GH_PAT
+        run: |
+          if [ -z "${GH_PAT}" ]; then
+            echo "Secret GH_PAT is missing. Add the same PAT used for Loop browser builds." >&2
+            exit 1
+          fi
+
+      - name: Publish iDustbin/glucose-guard-design
+        run: ./Scripts/publish_glucose_guard_design.sh
+
+      - name: Enable and start 4. Build Loop
+        run: |
+          set -euo pipefail
+          gh workflow enable "4. Build Loop" || true
+          gh workflow run "4. Build Loop" --ref "${GITHUB_REF_NAME}"
+          echo "Dispatched 4. Build Loop on ${GITHUB_REF_NAME}"
+          echo "That job applies icons + GlucoseGuard name from iDustbin/glucose-guard-design, then Fastlane/TestFlight."

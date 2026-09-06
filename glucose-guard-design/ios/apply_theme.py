@@ -342,7 +342,17 @@ def apply_xcode_design(loop: Path) -> None:
     replace_once(
         path,
         "        navigationController?.setToolbarHidden(false, animated: animated)",
-        "        navigationController?.setToolbarHidden(true, animated: animated)",
+        "        navigationController?.setToolbarHidden(true, animated: animated)\n        installGlucoseGuardTabBar()",
+    )
+    replace_once(
+        path,
+        """        super.viewDidAppear(animated)
+
+        if !appearedOnce {""",
+        """        super.viewDidAppear(animated)
+        layoutGlucoseGuardTabBar()
+
+        if !appearedOnce {""",
     )
     status_text = path.read_text(encoding="utf-8")
     if "installGlucoseGuardTabBar()" not in status_text:

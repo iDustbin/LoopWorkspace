@@ -13,8 +13,9 @@
         let bar = GlucoseGuardTabBar(
             state: glucoseGuardHomeState,
             onToday: { [weak self] in self?.presentGlucoseGuardToday() },
-            onLearning: { [weak self] in self?.presentGlucoseGuardLearning() },
-            onHealthway: { [weak self] in self?.presentGlucoseGuardHealthway() },
+            onFood: { [weak self] in self?.presentGlucoseGuardFood() },
+            onBolus: { [weak self] in self?.presentBolusScreen() },
+            onProfile: { [weak self] in self?.presentGlucoseGuardProfile() },
             onAdd: { [weak self] in self?.presentGlucoseGuardLogSheet() }
         )
         let host = UIHostingController(rootView: bar)
@@ -26,12 +27,14 @@
             host.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             host.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             host.view.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
-            host.view.heightAnchor.constraint(equalToConstant: 88)
+            host.view.heightAnchor.constraint(equalToConstant: 70)
         ])
         host.didMove(toParent: self)
         glucoseGuardTabBarHost = host
-        tableView.contentInset.bottom = 98
-        tableView.verticalScrollIndicatorInsets.bottom = 98
+        tableView.contentInset.bottom = 118
+        tableView.verticalScrollIndicatorInsets.bottom = 118
+        GlucoseGuardAlertCenter.shared.install()
+        refreshGlucoseGuardReadings()
     }
 
     private func presentGlucoseGuardDesign<Content: View>(_ root: Content, title: String) {
@@ -41,12 +44,115 @@
         hosting.view.backgroundColor = UIColor(red: 0.02, green: 0.02, blue: 0.03, alpha: 1)
         let navigation = UINavigationController(rootViewController: hosting)
         navigation.overrideUserInterfaceStyle = .dark
-        hosting.navigationItem.rightBarButtonItem = UIBarButtonItem(
-            barButtonSystemItem: .done,
+        let done = UIBarButtonItem(
+            title: NSLocalizedString("Done", comment: "Dismiss Glucose Guard screen"),
+            style: .done,
             target: navigation,
             action: #selector(UIViewController.dismissWithAnimation)
         )
-        present(navigation, animated: true)
+        done.tintColor = UIColor(red: 0.957, green: 0.200, blue: 0.235, alpha: 1)
+        hosting.navigationItem.leftBarButtonItem = done
+        let presenter = presentedViewController ?? self
+        presenter.present(navigation, animated: true)
+    }
+
+    private func refreshGlucoseGuardReadings() {
+        let latest = deviceManager.glucoseStore.latestGlucose
+        glucoseGuardHomeState.lastReading = latest.map { deviceManager.displayGlucosePreference.format($0.quantity) } ?? "— — —"
+        glucoseGuardHomeState.unitLabel = deviceManager.displayGlucosePreference.unit.unitString
+        if let date = latest?.startDate {
+            glucoseGuardHomeState.minutesAgo = String(format: "%.0f min", abs(date.timeIntervalSinceNow) / 60)
+        } else {
+            glucoseGuardHomeState.minutesAgo = "0 min"
+        }
+        reloadData()
+        evaluateGlucoseGuardAlarms()
+    }
+
+    private func evaluateGlucoseGuardAlarms() {
+        let mgdl = deviceManager.glucoseStore.latestGlucose?.quantity.doubleValue(for: .milligramsPerDeciliter)
+        GlucoseGuardAlertCenter.shared.evaluate(mgdl: mgdl, hasCGM: deviceManager.cgmManager != nil)
+    }
+
+    private func glucoseGuardDateString(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "d.M.yyyy / HH:mm"
+        return formatter.string(from: date)
+    }
+
+    private func glucoseGuardLifecycleDates(lifeDays: Double, used: Double) -> (String, String) {
+        let life = lifeDays * 24 * 3600
+        let inserted = Date().addingTimeInterval(-used * life)
+        let expires = inserted.addingTimeInterval(life)
+        return (glucoseGuardDateString(inserted), glucoseGuardDateString(expires))
+    }
+
+    private func presentGlucoseGuardProfile() {
+        presentGlucoseGuardDesign(
+            GlucoseGuardProfileView(
+                onGlucoseSettings: { [weak self] in self?.presentGlucoseGuardGlucoseSettings() },
+                onConnections: { [weak self] in self?.presentGlucoseGuardConnections() },
+                onEmergency: { [weak self] in self?.presentGlucoseGuardEmergency() },
+                onLoopSettings: { [weak self] in
+                    self?.dismiss(animated: true) { self?.presentSettings() }
+                }
+            ),
+            title: NSLocalizedString("Profile", comment: "Profile hub title")
+        )
+    }
+
+    private func presentGlucoseGuardGlucoseSettings() {
+        let transmitter = deviceManager.cgmManager?.localizedTitle ?? NSLocalizedString("Ohne Transmitter", comment: "No transmitter")
+        presentGlucoseGuardDesign(
+            GlucoseGuardGlucoseSettingsView(
+                unit: deviceManager.displayGlucosePreference.unit,
+                transmitter: transmitter,
+                onConnections: { [weak self] in self?.presentGlucoseGuardConnections() },
+                onEmergency: { [weak self] in self?.presentGlucoseGuardEmergency() }
+            ),
+            title: NSLocalizedString("Glucose Settings", comment: "Glucose settings title")
+        )
+    }
+
+    private func presentGlucoseGuardConnections() {
+        presentGlucoseGuardDesign(
+            GlucoseGuardConnectionSettingsView(
+                onLibre: { [weak self] in self?.presentGlucoseGuardAccount(service: "LibreView") },
+                onDexcom: { [weak self] in self?.presentGlucoseGuardAccount(service: "Dexcom Share") }
+            ),
+            title: NSLocalizedString("Connection Settings", comment: "Connection settings title")
+        )
+    }
+
+    private func presentGlucoseGuardAccount(service: String) {
+        let prefs = GlucoseGuardPreferences.shared
+        let isLibre = service == "LibreView"
+        presentGlucoseGuardDesign(
+            GlucoseGuardAccountView(
+                service: service,
+                nickname: Binding(
+                    get: { isLibre ? prefs.libreNickname : prefs.dexcomNickname },
+                    set: { if isLibre { prefs.libreNickname = $0 } else { prefs.dexcomNickname = $0 } }
+                ),
+                server: Binding(
+                    get: { isLibre ? prefs.libreServer : prefs.dexcomServer },
+                    set: { if isLibre { prefs.libreServer = $0 } else { prefs.dexcomServer = $0 } }
+                ),
+                onAdd: { [weak self] in
+                    self?.dismiss(animated: true) {
+                        self?.executeHUDTapAction(self?.deviceManager.didTapOnCGMStatus())
+                    }
+                }
+            ),
+            title: service
+        )
+    }
+
+    private func presentGlucoseGuardEmergency() {
+        presentGlucoseGuardDesign(
+            GlucoseGuardEmergencyContactsView(),
+            title: NSLocalizedString("Emergency Contacts", comment: "Emergency contacts title")
+        )
     }
 
     private func handleGlucoseGuardCGMTap() {
@@ -58,25 +164,17 @@
     }
 
     private func presentGlucoseGuardCGMSourceOverlay() {
-        let sheet = UIAlertController(
-            title: NSLocalizedString("Add CGM", comment: "CGM source overlay title"),
-            message: NSLocalizedString("LibreLinkUp, Dexcom Share, or another CGM source.", comment: "CGM source overlay subtitle"),
-            preferredStyle: .actionSheet
+        presentGlucoseGuardConnections()
+    }
+
+    private func presentGlucoseGuardFood() {
+        let note = UIAlertController(
+            title: NSLocalizedString("Food", comment: "Food handover title"),
+            message: NSLocalizedString("Food overview is a separate app and is not part of this Loop screen.", comment: "Food handover message"),
+            preferredStyle: .alert
         )
-        sheet.addAction(UIAlertAction(title: "LibreLinkUp", style: .default) { [weak self] _ in
-            self?.executeHUDTapAction(self?.deviceManager.didTapOnCGMStatus())
-        })
-        sheet.addAction(UIAlertAction(title: "Dexcom Share", style: .default) { [weak self] _ in
-            self?.executeHUDTapAction(self?.deviceManager.didTapOnCGMStatus())
-        })
-        sheet.addAction(UIAlertAction(
-            title: NSLocalizedString("Other CGM", comment: "Open Loop CGM picker"),
-            style: .default
-        ) { [weak self] _ in
-            self?.executeHUDTapAction(self?.deviceManager.didTapOnCGMStatus())
-        })
-        sheet.addAction(UIAlertAction(title: NSLocalizedString("Cancel", comment: "Cancel CGM source"), style: .cancel))
-        present(sheet, animated: true)
+        note.addAction(UIAlertAction(title: NSLocalizedString("OK", comment: "Dismiss food handover"), style: .default))
+        present(note, animated: true)
     }
 
     @objc private func presentGlucoseGuardLearning() {
@@ -148,64 +246,35 @@
     }
 
     private func presentGlucoseGuardCGMDetail() {
-        let unit = deviceManager.displayGlucosePreference.unit
-        let latest = deviceManager.glucoseStore.latestGlucose
-        let reading = latest.map { deviceManager.displayGlucosePreference.format($0.quantity) } ?? "— — —"
-        let minutes: String
-        if let date = latest?.startDate {
-            minutes = String(format: "%.0f min", abs(date.timeIntervalSinceNow) / 60)
-        } else {
-            minutes = "0 min"
-        }
+        refreshGlucoseGuardReadings()
         let used = deviceManager.cgmLifecycleProgress?.percentComplete ?? 0
         let remaining = max(0, (1 - used) * 14)
-        let periods = [3, 7, 30, 90]
-        let group = DispatchGroup()
-        var averages: [(Int, String)] = []
-        let lock = NSLock()
-        for days in periods {
-            group.enter()
-            let start = Calendar.current.date(byAdding: .day, value: -days, to: Date()) ?? Date()
-            deviceManager.glucoseStore.getGlucoseSamples(start: start, end: nil) { result in
-                defer { group.leave() }
-                let values: [Double]
-                switch result {
-                case .success(let samples):
-                    values = samples.map { $0.quantity.doubleValue(for: .milligramsPerDeciliter) }
-                case .failure:
-                    values = []
-                }
-                let text: String
-                if values.isEmpty {
-                    text = "—"
-                } else {
-                    let mean = values.reduce(0, +) / Double(values.count)
-                    let quantity = HKQuantity(unit: .milligramsPerDeciliter, doubleValue: mean)
-                    text = String(format: "%.1f %@", quantity.doubleValue(for: unit), unit.unitString)
-                }
-                lock.lock()
-                averages.append((days, text))
-                lock.unlock()
-            }
-        }
-        group.notify(queue: .main) {
-            let ordered = averages.sorted { $0.0 < $1.0 }
-            self.presentGlucoseGuardDesign(
-                GlucoseGuardCGMDetailView(
-                    lastReading: reading,
-                    minutesAgo: minutes,
-                    remainingDays: remaining,
-                    sensorLifeDays: 14,
-                    averages: ordered,
-                    onChooseSource: {
-                        self.dismiss(animated: true) {
-                            self.presentGlucoseGuardCGMSourceOverlay()
-                        }
+        let dates = glucoseGuardLifecycleDates(lifeDays: 14, used: used)
+        let title = deviceManager.cgmManager?.localizedTitle ?? NSLocalizedString("CGM", comment: "CGM screen title")
+        presentGlucoseGuardDesign(
+            GlucoseGuardCGMDetailView(
+                state: glucoseGuardHomeState,
+                title: title,
+                remainingDays: remaining,
+                insertionText: dates.0,
+                expiryText: dates.1,
+                onRefresh: { [weak self] in self?.refreshGlucoseGuardReadings() },
+                onNotificationSettings: { [weak self] in self?.presentGlucoseGuardGlucoseSettings() },
+                onDeviceSettings: { [weak self] in
+                    self?.dismiss(animated: true) { self?.onCGMTapped() }
+                },
+                onStopSensor: { [weak self] in
+                    let testing = self?.deviceManager.cgmManager is TestingCGMManager
+                    self?.deviceManager.cgmManager?.delete() { }
+                    if testing == true {
+                        self?.deviceManager.deleteTestingCGMData()
                     }
-                ),
-                title: "CGM"
-            )
-        }
+                    self?.dismiss(animated: true)
+                },
+                onDone: { [weak self] in self?.dismiss(animated: true) }
+            ),
+            title: title
+        )
     }
 
     private var glucoseGuardRemainingInsulin: String {
@@ -222,28 +291,33 @@
         let used = deviceManager.pumpLifecycleProgress?.percentComplete ?? 0
         let remaining = max(0, (1 - used) * 3)
         let name = deviceManager.pumpManager?.localizedTitle ?? "Omnipod DASH"
-        let basal = hudView?.pumpStatusHUD.basalRateHUD.accessibilityValue ?? "—"
+        let delivery = hudView?.pumpStatusHUD.basalRateHUD.accessibilityValue ?? "—"
+        let dates = glucoseGuardLifecycleDates(lifeDays: 3, used: used)
+        let details: [(String, String)] = [
+            ("Pump", name),
+            ("Pump Paired", dates.0),
+            ("Pump Expires", dates.1),
+            ("Insulin Delivery", delivery),
+            ("Insulin Remaining", glucoseGuardRemainingInsulin),
+            ("Current Bolus", glucoseGuardCurrentBolus)
+        ]
         presentGlucoseGuardDesign(
             GlucoseGuardPumpDetailView(
                 pumpName: name,
                 remainingDays: remaining,
                 remainingHours: remaining * 24,
-                podLifeDays: 3,
-                basal: basal,
+                insulinDelivery: delivery,
                 remainingInsulin: glucoseGuardRemainingInsulin,
-                currentBolus: glucoseGuardCurrentBolus,
-                onChangeBolus: {
-                    self.dismiss(animated: true) {
-                        self.presentBolusScreen()
-                    }
+                pairedText: dates.0,
+                expiryText: dates.1,
+                details: details,
+                onSuspend: { [weak self] in
+                    self?.dismiss(animated: true) { self?.onPumpTapped() }
                 },
-                onOpenPump: {
-                    self.dismiss(animated: true) {
-                        if let pumpView = self.hudView?.pumpStatusHUD {
-                            self.executeHUDTapAction(self.deviceManager.didTapOnPumpStatus(pumpView.pumpManagerProvidedHUD))
-                        }
-                    }
-                }
+                onReplace: { [weak self] in
+                    self?.dismiss(animated: true) { self?.onPumpTapped() }
+                },
+                onDone: { [weak self] in self?.dismiss(animated: true) }
             ),
             title: name
         )

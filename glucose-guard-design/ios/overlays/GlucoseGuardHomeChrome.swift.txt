@@ -28,15 +28,7 @@
         sheet.addAction(UIAlertAction(
             title: NSLocalizedString("Food", comment: "Add-sheet action reserved for the food app"),
             style: .default,
-            handler: { [weak self] _ in
-                let note = UIAlertController(
-                    title: NSLocalizedString("Food", comment: "Food handover title"),
-                    message: NSLocalizedString("Food overview is a separate app and is not part of this Loop screen.", comment: "Food handover message"),
-                    preferredStyle: .alert
-                )
-                note.addAction(UIAlertAction(title: NSLocalizedString("OK", comment: "Dismiss food handover"), style: .default))
-                self?.present(note, animated: true)
-            }
+            handler: { [weak self] _ in self?.presentGlucoseGuardFood() }
         ))
         let preMealAction = UIAlertAction(
             title: NSLocalizedString("Pre-Meal Targets", comment: "Add-sheet action for pre-meal"),

@@ -14,6 +14,7 @@ INJECT_MARKERS = (
     "    // GLUCOSE_GUARD_THEME home chrome",
     "// GLUCOSE_GUARD_THEME statistics",
     "// GLUCOSE_GUARD_XCODE_DESIGN\n",
+    "// GLUCOSE_GUARD_FIGMA_SCREENS\n",
 )
 
 
@@ -157,6 +158,59 @@ def apply_hud_chrome(loop: Path) -> None:
         "            return (title: LocalizedString(\"Glucose Guard Failure\", comment: \"Title of red loop message\"),",
     )
 
+    # Loop hides the current glucose value when a CGM status highlight
+    # (sensor days, "Add CGM", …) is present. Keep the number in the left pill.
+    cgm = loop / "LoopUI" / "Views" / "CGMStatusHUDView.swift"
+    replace_once(
+        cgm,
+        """    override func presentStatusHighlight() {
+        defer {
+            // when the status highlight is updated, the trend icon may also need to be updated
+            updateTrendIcon()
+            // when the status highlight is updated, the accessibility string is updated
+            accessibilityValue = viewModel.accessibilityString
+        }
+        
+        guard statusStackView.arrangedSubviews.contains(glucoseValueHUD),
+            statusStackView.arrangedSubviews.contains(glucoseTrendHUD) else
+        {
+            return
+        }
+        
+        // need to also hide these view, since they will be added back to the stack at some point
+        glucoseValueHUD.isHidden = true
+        glucoseTrendHUD.isHidden = true
+        statusStackView.removeArrangedSubview(glucoseValueHUD)
+        statusStackView.removeArrangedSubview(glucoseTrendHUD)
+        
+        super.presentStatusHighlight()
+    }""",
+        """    override func presentStatusHighlight() {
+        // Glucose Guard: the left pill always shows the current glucose value.
+        // Sensor expiry and other CGM highlights stay in the CGM detail sheet.
+        updateTrendIcon()
+        accessibilityValue = viewModel.accessibilityString
+    }""",
+    )
+
+    glucose_value = loop / "LoopUI" / "Views" / "GlucoseValueHUDView.swift"
+    replace_once(
+        glucose_value,
+        """            glucoseLabel.text = CGMStatusHUDViewModel.staleGlucoseRepresentation
+            glucoseLabel.textColor = .label""",
+        """            glucoseLabel.text = CGMStatusHUDViewModel.staleGlucoseRepresentation
+            glucoseLabel.textColor = .white
+            glucoseLabel.font = .systemFont(ofSize: 22, weight: .bold)""",
+    )
+    replace_once(
+        glucose_value,
+        """            unitLabel.text = "–"
+            unitLabel.textColor = .secondaryLabel""",
+        """            unitLabel.text = "–"
+            unitLabel.textColor = UIColor.white.withAlphaComponent(0.72)
+            unitLabel.font = .systemFont(ofSize: 11, weight: .semibold)""",
+    )
+
 
 def strip_injected_overlays(text: str) -> str:
     indexes = [text.find(marker) for marker in INJECT_MARKERS]
@@ -176,13 +230,14 @@ def inject_overlays(path: Path) -> None:
     chrome = (overlays / "GlucoseGuardHomeChrome.swift.txt").read_text(encoding="utf-8")
     stats = (overlays / "GlucoseGuardStatistics.swift.txt").read_text(encoding="utf-8")
     design = (overlays / "GlucoseGuardXcodeDesign.swift.txt").read_text(encoding="utf-8")
+    screens = (overlays / "GlucoseGuardFigmaScreens.swift.txt").read_text(encoding="utf-8")
     text = strip_injected_overlays(path.read_text(encoding="utf-8"))
     if insert_after not in text:
         die(f"Could not insert Glucose Guard overlays into {path}")
     text = text.replace(insert_after, insert_after + "\n" + host + "\n" + chrome + "\n", 1)
     if not text.endswith("\n"):
         text += "\n"
-    text += "\n" + stats + "\n\n" + design
+    text += "\n" + stats + "\n\n" + design + "\n\n" + screens
     if not text.endswith("\n"):
         text += "\n"
     path.write_text(text, encoding="utf-8")
@@ -277,6 +332,13 @@ def apply_toolbar(loop: Path) -> None:
 
 def apply_xcode_design(loop: Path) -> None:
     path = loop / "Loop" / "View Controllers" / "StatusTableViewController.swift"
+    status_imports = path.read_text(encoding="utf-8")
+    if "import UserNotifications" not in status_imports:
+        replace_once(
+            path,
+            "import WidgetKit\n",
+            "import WidgetKit\nimport UserNotifications\n",
+        )
     replace_once(
         path,
         "        navigationController?.setToolbarHidden(false, animated: animated)",
@@ -353,6 +415,18 @@ def apply_xcode_design(loop: Path) -> None:
             }""",
         """                hudView.pumpStatusHUD.presentStatusBadge(self.deviceManager.pumpStatusBadge)
                 hudView.pumpStatusHUD.lifecycleProgress = self.deviceManager.pumpLifecycleProgress
+                self.evaluateGlucoseGuardAlarms()
+            }""",
+        required=False,
+    )
+    replace_once(
+        path,
+        """                hudView.pumpStatusHUD.presentStatusBadge(self.deviceManager.pumpStatusBadge)
+                hudView.pumpStatusHUD.lifecycleProgress = self.deviceManager.pumpLifecycleProgress
+            }""",
+        """                hudView.pumpStatusHUD.presentStatusBadge(self.deviceManager.pumpStatusBadge)
+                hudView.pumpStatusHUD.lifecycleProgress = self.deviceManager.pumpLifecycleProgress
+                self.evaluateGlucoseGuardAlarms()
             }""",
         required=False,
     )

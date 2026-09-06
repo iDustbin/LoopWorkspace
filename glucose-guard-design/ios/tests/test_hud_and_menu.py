@@ -90,6 +90,8 @@ def test_menu_overlay() -> None:
     assert "layoutGlucoseGuardTabBar" in host
     assert "!(navView is UITableView)" in host
     assert "presentBolusScreen()" in host
+    assert "viewDidLayoutSubviews" not in host
+    assert "glucoseGuardTabBarIsLayingOut" in host
     assert "additionalSafeAreaInsets.bottom" in host
     assert "frame(maxWidth: .infinity, maxHeight: .infinity" in design
     assert "minHeight: 58" in design

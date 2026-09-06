@@ -2,11 +2,10 @@
 
     private let glucoseGuardHomeState = GlucoseGuardHomeState()
     private var glucoseGuardTabBarHost: UIHostingController<GlucoseGuardTabBar>?
-    private var glucoseGuardHomeHUDHost: UIHostingController<GlucoseGuardHomeHUD>?
 
     private func installGlucoseGuardTabBar() {
         overrideUserInterfaceStyle = .dark
-        tableView.backgroundColor = UIColor(red: 0.039, green: 0.039, blue: 0.039, alpha: 1)
+        tableView.backgroundColor = UIColor(red: 0.02, green: 0.02, blue: 0.03, alpha: 1)
         navigationController?.navigationBar.barStyle = .black
         navigationController?.navigationBar.tintColor = UIColor(red: 0.957, green: 0.200, blue: 0.235, alpha: 1)
         guard glucoseGuardTabBarHost == nil else { return }
@@ -27,97 +26,21 @@
             host.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             host.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             host.view.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
-            host.view.heightAnchor.constraint(equalToConstant: 86)
+            host.view.heightAnchor.constraint(equalToConstant: 88)
         ])
         host.didMove(toParent: self)
         glucoseGuardTabBarHost = host
-        tableView.contentInset.bottom = 96
-        tableView.verticalScrollIndicatorInsets.bottom = 96
+        tableView.contentInset.bottom = 98
+        tableView.verticalScrollIndicatorInsets.bottom = 98
     }
 
-    private func attachGlucoseGuardHomeHUD(to cell: UITableViewCell) {
-        cell.backgroundColor = UIColor(red: 0.039, green: 0.039, blue: 0.039, alpha: 1)
-        cell.contentView.backgroundColor = UIColor(red: 0.039, green: 0.039, blue: 0.039, alpha: 1)
-        if let hudView {
-            hudView.isHidden = true
-            hudView.alpha = 0
-        }
-        let hud = GlucoseGuardHomeHUD(
-            state: glucoseGuardHomeState,
-            onCGM: { [weak self] in self?.handleGlucoseGuardCGMTap() },
-            onPump: { [weak self] in self?.presentGlucoseGuardPumpDetail() },
-            onLoop: { [weak self] in
-                guard let self, let hudView = self.hudView else { return }
-                self.showLoopCompletionMessage(hudView.loopCompletionHUD)
-            }
-        )
-        if let host = glucoseGuardHomeHUDHost {
-            host.rootView = hud
-        } else {
-            let host = UIHostingController(rootView: hud)
-            host.view.backgroundColor = .clear
-            addChild(host)
-            host.didMove(toParent: self)
-            glucoseGuardHomeHUDHost = host
-        }
-        guard let hostView = glucoseGuardHomeHUDHost?.view else { return }
-        if hostView.superview !== cell.contentView {
-            hostView.removeFromSuperview()
-            hostView.translatesAutoresizingMaskIntoConstraints = false
-            cell.contentView.addSubview(hostView)
-            NSLayoutConstraint.activate([
-                hostView.leadingAnchor.constraint(equalTo: cell.contentView.leadingAnchor),
-                hostView.trailingAnchor.constraint(equalTo: cell.contentView.trailingAnchor),
-                hostView.topAnchor.constraint(equalTo: cell.contentView.topAnchor),
-                hostView.bottomAnchor.constraint(equalTo: cell.contentView.bottomAnchor)
-            ])
-        }
-        refreshGlucoseGuardHomeHUD()
-    }
-
-    private func refreshGlucoseGuardHomeHUD() {
-        let state = glucoseGuardHomeState
-        state.hasCGM = deviceManager.cgmManager != nil
-        state.hasPump = deviceManager.pumpManager != nil
-        if let glucose = deviceManager.glucoseStore.latestGlucose {
-            state.glucose = deviceManager.displayGlucosePreference.format(glucose.quantity)
-            state.trendArrows = deviceManager.glucoseDisplay(for: glucose)?.trendType?.arrows ?? ""
-            let formatter = DateFormatter()
-            formatter.timeStyle = .short
-            state.readingTime = formatter.string(from: glucose.startDate)
-        } else {
-            state.glucose = "—"
-            state.trendArrows = ""
-            state.readingTime = ""
-        }
-        if let iob = currentIOBDescription, !iob.isEmpty {
-            state.insulin = iob.contains("IE") || iob.contains("U") ? iob.replacingOccurrences(of: "U", with: "IE") : "\(iob) IE"
-        } else {
-            state.insulin = "+0.0 IE"
-        }
-        if let units = deviceManager.doseStore.lastReservoirValue?.unitVolume {
-            state.remainingInsulin = units >= 50 ? "50+ IE" : String(format: "%.0f IE", units)
-            state.reservoirFraction = min(max(units / 200.0, 0), 1)
-        } else {
-            state.remainingInsulin = "—"
-            state.reservoirFraction = 0
-        }
-        if let last = deviceManager.loopManager.lastLoopCompleted {
-            state.loopConnected = Date().timeIntervalSince(last) < 360
-        } else {
-            state.loopConnected = false
-        }
-    }
-
-    private func presentGlucoseGuardDesign<Content: View>(_ root: Content, title: String, light: Bool = false) {
+    private func presentGlucoseGuardDesign<Content: View>(_ root: Content, title: String) {
         let hosting = UIHostingController(rootView: root)
         hosting.title = title
-        hosting.overrideUserInterfaceStyle = light ? .light : .dark
-        hosting.view.backgroundColor = light
-            ? UIColor(red: 0.980, green: 0.980, blue: 0.980, alpha: 1)
-            : UIColor(red: 0.039, green: 0.039, blue: 0.039, alpha: 1)
+        hosting.overrideUserInterfaceStyle = .dark
+        hosting.view.backgroundColor = UIColor(red: 0.02, green: 0.02, blue: 0.03, alpha: 1)
         let navigation = UINavigationController(rootViewController: hosting)
-        navigation.overrideUserInterfaceStyle = hosting.overrideUserInterfaceStyle
+        navigation.overrideUserInterfaceStyle = .dark
         hosting.navigationItem.rightBarButtonItem = UIBarButtonItem(
             barButtonSystemItem: .done,
             target: navigation,
@@ -218,8 +141,7 @@
                         tir: tir,
                         points: spark
                     ),
-                    title: NSLocalizedString("Healthway", comment: "Healthway tab title"),
-                    light: true
+                    title: NSLocalizedString("Healthway", comment: "Healthway tab title")
                 )
             }
         }
@@ -286,13 +208,21 @@
         }
     }
 
+    private var glucoseGuardRemainingInsulin: String {
+        guard let units = deviceManager.doseStore.lastReservoirValue?.unitVolume else { return "—" }
+        return units >= 50 ? "50+ IE" : String(format: "%.0f IE", units)
+    }
+
+    private var glucoseGuardCurrentBolus: String {
+        guard let iob = currentIOBDescription, !iob.isEmpty else { return "+0.0 IE" }
+        return iob.contains("IE") || iob.contains("U") ? iob.replacingOccurrences(of: "U", with: "IE") : "\(iob) IE"
+    }
+
     private func presentGlucoseGuardPumpDetail() {
         let used = deviceManager.pumpLifecycleProgress?.percentComplete ?? 0
         let remaining = max(0, (1 - used) * 3)
         let name = deviceManager.pumpManager?.localizedTitle ?? "Omnipod DASH"
         let basal = hudView?.pumpStatusHUD.basalRateHUD.accessibilityValue ?? "—"
-        let remainingInsulin = glucoseGuardHomeState.remainingInsulin
-        let currentBolus = glucoseGuardHomeState.insulin
         presentGlucoseGuardDesign(
             GlucoseGuardPumpDetailView(
                 pumpName: name,
@@ -300,8 +230,8 @@
                 remainingHours: remaining * 24,
                 podLifeDays: 3,
                 basal: basal,
-                remainingInsulin: remainingInsulin,
-                currentBolus: currentBolus,
+                remainingInsulin: glucoseGuardRemainingInsulin,
+                currentBolus: glucoseGuardCurrentBolus,
                 onChangeBolus: {
                     self.dismiss(animated: true) {
                         self.presentBolusScreen()

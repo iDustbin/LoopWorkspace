@@ -116,18 +116,33 @@ def apply_hud_chrome(loop: Path) -> None:
         device,
         "            progressView.tintColor = .systemGray",
         "            progressView.tintColor = UIColor(red: 0.957, green: 0.200, blue: 0.235, alpha: 1)",
+        required=False,
     )
     replace_once(
         device,
             "            backgroundView.backgroundColor = .systemBackground\n            backgroundView.layer.cornerRadius = 23",
+            "            backgroundView.backgroundColor = UIColor(red: 0.11, green: 0.11, blue: 0.13, alpha: 1)\n            backgroundView.layer.cornerRadius = 22\n            backgroundView.layer.borderWidth = 1\n            backgroundView.layer.borderColor = UIColor.white.withAlphaComponent(0.12).cgColor",
+        required=False,
+    )
+    replace_once(
+        device,
             "            backgroundView.backgroundColor = .systemBackground\n            backgroundView.layer.cornerRadius = 18\n            backgroundView.layer.borderWidth = 1\n            backgroundView.layer.borderColor = UIColor.separator.cgColor",
+            "            backgroundView.backgroundColor = UIColor(red: 0.11, green: 0.11, blue: 0.13, alpha: 1)\n            backgroundView.layer.cornerRadius = 22\n            backgroundView.layer.borderWidth = 1\n            backgroundView.layer.borderColor = UIColor.white.withAlphaComponent(0.12).cgColor",
+        required=False,
     )
 
     status_bar = loop / "LoopUI" / "Views" / "StatusBarHUDView.swift"
     replace_once(
         status_bar,
-        "        self.backgroundColor = UIColor.secondarySystemBackground",
         "        self.backgroundColor = UIColor.systemBackground",
+        "        self.backgroundColor = UIColor.clear",
+        required=False,
+    )
+    replace_once(
+        status_bar,
+        "        self.backgroundColor = UIColor.secondarySystemBackground",
+        "        self.backgroundColor = UIColor.clear",
+        required=False,
     )
 
     completion = loop / "LoopUI" / "Views" / "LoopCompletionHUDView.swift"
@@ -311,22 +326,22 @@ def apply_xcode_design(loop: Path) -> None:
         """        case .hud:
             let cell = tableView.dequeueReusableCell(withIdentifier: HUDViewTableViewCell.className, for: indexPath) as! HUDViewTableViewCell
             hudView = cell.hudView
-
+            attachGlucoseGuardHomeHUD(to: cell)
             return cell""",
         """        case .hud:
             let cell = tableView.dequeueReusableCell(withIdentifier: HUDViewTableViewCell.className, for: indexPath) as! HUDViewTableViewCell
             hudView = cell.hudView
-            attachGlucoseGuardHomeHUD(to: cell)
+
             return cell""",
         required=False,
     )
     replace_once(
         path,
-        """        case .hud, .status, .alertWarning:
-            return UITableView.automaticDimension""",
         """        case .hud:
             return 108
         case .status, .alertWarning:
+            return UITableView.automaticDimension""",
+        """        case .hud, .status, .alertWarning:
             return UITableView.automaticDimension""",
         required=False,
     )
@@ -334,10 +349,10 @@ def apply_xcode_design(loop: Path) -> None:
         path,
         """                hudView.pumpStatusHUD.presentStatusBadge(self.deviceManager.pumpStatusBadge)
                 hudView.pumpStatusHUD.lifecycleProgress = self.deviceManager.pumpLifecycleProgress
+                self.refreshGlucoseGuardHomeHUD()
             }""",
         """                hudView.pumpStatusHUD.presentStatusBadge(self.deviceManager.pumpStatusBadge)
                 hudView.pumpStatusHUD.lifecycleProgress = self.deviceManager.pumpLifecycleProgress
-                self.refreshGlucoseGuardHomeHUD()
             }""",
         required=False,
     )

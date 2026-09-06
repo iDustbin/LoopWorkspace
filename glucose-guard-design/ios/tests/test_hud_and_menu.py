@@ -77,6 +77,9 @@ def test_menu_overlay() -> None:
     assert "presentSettings()" in host
     assert "presentGlucoseGuardLearning()" not in host.split("onToday")[0]
     assert 'onLearning:' not in host
+    assert "offset(y: -34)" not in design
+    assert "view.bottomAnchor" in host
+    assert "additionalSafeAreaInsets.bottom" in host
     print("Figma menu overlay wires Today / Food / Bolus / Profile")
 
 

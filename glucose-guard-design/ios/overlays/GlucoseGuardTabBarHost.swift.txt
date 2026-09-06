@@ -1,11 +1,17 @@
     // GLUCOSE_GUARD_XCODE_DESIGN host
 
+    private let glucoseGuardHomeState = GlucoseGuardHomeState()
     private var glucoseGuardTabBarHost: UIHostingController<GlucoseGuardTabBar>?
 
     private func installGlucoseGuardTabBar() {
+        overrideUserInterfaceStyle = .dark
+        tableView.backgroundColor = UIColor(red: 0.02, green: 0.02, blue: 0.03, alpha: 1)
+        navigationController?.navigationBar.barStyle = .black
+        navigationController?.navigationBar.tintColor = UIColor(red: 0.957, green: 0.200, blue: 0.235, alpha: 1)
         guard glucoseGuardTabBarHost == nil else { return }
         navigationController?.setToolbarHidden(true, animated: false)
         let bar = GlucoseGuardTabBar(
+            state: glucoseGuardHomeState,
             onToday: { [weak self] in self?.presentGlucoseGuardToday() },
             onLearning: { [weak self] in self?.presentGlucoseGuardLearning() },
             onHealthway: { [weak self] in self?.presentGlucoseGuardHealthway() },
@@ -19,25 +25,58 @@
         NSLayoutConstraint.activate([
             host.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             host.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            host.view.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor)
+            host.view.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
+            host.view.heightAnchor.constraint(equalToConstant: 88)
         ])
         host.didMove(toParent: self)
         glucoseGuardTabBarHost = host
-        tableView.contentInset.bottom = 96
-        tableView.verticalScrollIndicatorInsets.bottom = 96
+        tableView.contentInset.bottom = 98
+        tableView.verticalScrollIndicatorInsets.bottom = 98
     }
 
     private func presentGlucoseGuardDesign<Content: View>(_ root: Content, title: String) {
         let hosting = UIHostingController(rootView: root)
         hosting.title = title
-        hosting.view.backgroundColor = UIColor(red: 0.039, green: 0.039, blue: 0.039, alpha: 1)
+        hosting.overrideUserInterfaceStyle = .dark
+        hosting.view.backgroundColor = UIColor(red: 0.02, green: 0.02, blue: 0.03, alpha: 1)
         let navigation = UINavigationController(rootViewController: hosting)
+        navigation.overrideUserInterfaceStyle = .dark
         hosting.navigationItem.rightBarButtonItem = UIBarButtonItem(
             barButtonSystemItem: .done,
             target: navigation,
             action: #selector(UIViewController.dismissWithAnimation)
         )
         present(navigation, animated: true)
+    }
+
+    private func handleGlucoseGuardCGMTap() {
+        if deviceManager.cgmManager == nil {
+            presentGlucoseGuardCGMSourceOverlay()
+        } else {
+            presentGlucoseGuardCGMDetail()
+        }
+    }
+
+    private func presentGlucoseGuardCGMSourceOverlay() {
+        let sheet = UIAlertController(
+            title: NSLocalizedString("Add CGM", comment: "CGM source overlay title"),
+            message: NSLocalizedString("LibreLinkUp, Dexcom Share, or another CGM source.", comment: "CGM source overlay subtitle"),
+            preferredStyle: .actionSheet
+        )
+        sheet.addAction(UIAlertAction(title: "LibreLinkUp", style: .default) { [weak self] _ in
+            self?.executeHUDTapAction(self?.deviceManager.didTapOnCGMStatus())
+        })
+        sheet.addAction(UIAlertAction(title: "Dexcom Share", style: .default) { [weak self] _ in
+            self?.executeHUDTapAction(self?.deviceManager.didTapOnCGMStatus())
+        })
+        sheet.addAction(UIAlertAction(
+            title: NSLocalizedString("Other CGM", comment: "Open Loop CGM picker"),
+            style: .default
+        ) { [weak self] _ in
+            self?.executeHUDTapAction(self?.deviceManager.didTapOnCGMStatus())
+        })
+        sheet.addAction(UIAlertAction(title: NSLocalizedString("Cancel", comment: "Cancel CGM source"), style: .cancel))
+        present(sheet, animated: true)
     }
 
     @objc private func presentGlucoseGuardLearning() {
@@ -63,6 +102,9 @@
         let unit = deviceManager.displayGlucosePreference.unit
         let latest = deviceManager.glucoseStore.latestGlucose
         let current = latest.map { deviceManager.displayGlucosePreference.format($0.quantity) } ?? "—"
+        let formatter = DateFormatter()
+        formatter.timeStyle = .short
+        let readingTime = latest.map { formatter.string(from: $0.startDate) } ?? "—"
         let start = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
         deviceManager.glucoseStore.getGlucoseSamples(start: start, end: nil) { result in
             let values: [Double]
@@ -93,6 +135,7 @@
                 self.presentGlucoseGuardDesign(
                     GlucoseGuardHealthwayView(
                         currentGlucose: current,
+                        readingTime: readingTime,
                         a1c: a1c,
                         average: avgText,
                         tir: tir,
@@ -116,55 +159,79 @@
         }
         let used = deviceManager.cgmLifecycleProgress?.percentComplete ?? 0
         let remaining = max(0, (1 - used) * 14)
-        let start = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
-        deviceManager.glucoseStore.getGlucoseSamples(start: start, end: nil) { result in
-            let values: [Double]
-            switch result {
-            case .success(let samples):
-                values = samples.map { $0.quantity.doubleValue(for: .milligramsPerDeciliter) }
-            case .failure:
-                values = []
-            }
-            let average: String
-            if values.isEmpty {
-                average = "—"
-            } else {
-                let mean = values.reduce(0, +) / Double(values.count)
-                let quantity = HKQuantity(unit: .milligramsPerDeciliter, doubleValue: mean)
-                average = String(format: "%.1f %@", quantity.doubleValue(for: unit), unit.unitString)
-            }
-            DispatchQueue.main.async {
-                self.presentGlucoseGuardDesign(
-                    GlucoseGuardCGMDetailView(
-                        lastReading: reading,
-                        minutesAgo: minutes,
-                        remainingDays: remaining,
-                        sensorLifeDays: 14,
-                        average: average,
-                        onOpenCGM: {
-                            self.dismiss(animated: true) {
-                                self.executeHUDTapAction(self.deviceManager.didTapOnCGMStatus())
-                            }
-                        }
-                    ),
-                    title: "CGM"
-                )
+        let periods = [3, 7, 30, 90]
+        let group = DispatchGroup()
+        var averages: [(Int, String)] = []
+        let lock = NSLock()
+        for days in periods {
+            group.enter()
+            let start = Calendar.current.date(byAdding: .day, value: -days, to: Date()) ?? Date()
+            deviceManager.glucoseStore.getGlucoseSamples(start: start, end: nil) { result in
+                defer { group.leave() }
+                let values: [Double]
+                switch result {
+                case .success(let samples):
+                    values = samples.map { $0.quantity.doubleValue(for: .milligramsPerDeciliter) }
+                case .failure:
+                    values = []
+                }
+                let text: String
+                if values.isEmpty {
+                    text = "—"
+                } else {
+                    let mean = values.reduce(0, +) / Double(values.count)
+                    let quantity = HKQuantity(unit: .milligramsPerDeciliter, doubleValue: mean)
+                    text = String(format: "%.1f %@", quantity.doubleValue(for: unit), unit.unitString)
+                }
+                lock.lock()
+                averages.append((days, text))
+                lock.unlock()
             }
         }
+        group.notify(queue: .main) {
+            let ordered = averages.sorted { $0.0 < $1.0 }
+            self.presentGlucoseGuardDesign(
+                GlucoseGuardCGMDetailView(
+                    lastReading: reading,
+                    minutesAgo: minutes,
+                    remainingDays: remaining,
+                    sensorLifeDays: 14,
+                    averages: ordered,
+                    onChooseSource: {
+                        self.dismiss(animated: true) {
+                            self.presentGlucoseGuardCGMSourceOverlay()
+                        }
+                    }
+                ),
+                title: "CGM"
+            )
+        }
+    }
+
+    private var glucoseGuardRemainingInsulin: String {
+        guard let units = deviceManager.doseStore.lastReservoirValue?.unitVolume else { return "—" }
+        return units >= 50 ? "50+ IE" : String(format: "%.0f IE", units)
+    }
+
+    private var glucoseGuardCurrentBolus: String {
+        guard let iob = currentIOBDescription, !iob.isEmpty else { return "+0.0 IE" }
+        return iob.contains("IE") || iob.contains("U") ? iob.replacingOccurrences(of: "U", with: "IE") : "\(iob) IE"
     }
 
     private func presentGlucoseGuardPumpDetail() {
         let used = deviceManager.pumpLifecycleProgress?.percentComplete ?? 0
         let remaining = max(0, (1 - used) * 3)
-        let name = deviceManager.pumpManager?.localizedTitle ?? "Insulin Pump"
+        let name = deviceManager.pumpManager?.localizedTitle ?? "Omnipod DASH"
         let basal = hudView?.pumpStatusHUD.basalRateHUD.accessibilityValue ?? "—"
         presentGlucoseGuardDesign(
             GlucoseGuardPumpDetailView(
                 pumpName: name,
                 remainingDays: remaining,
+                remainingHours: remaining * 24,
                 podLifeDays: 3,
                 basal: basal,
-                remainingInsulin: "—",
+                remainingInsulin: glucoseGuardRemainingInsulin,
+                currentBolus: glucoseGuardCurrentBolus,
                 onChangeBolus: {
                     self.dismiss(animated: true) {
                         self.presentBolusScreen()

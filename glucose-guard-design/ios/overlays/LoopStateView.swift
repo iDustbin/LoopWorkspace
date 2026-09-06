@@ -2,7 +2,8 @@
 //  LoopStateView.swift
 //  LoopUI
 //
-//  Glucose Guard theme: brand mark inside the closed-loop status ring.
+//  Glucose Guard: Loop’s status ring stays, but it is a full circle around
+//  the brand mark — never the chopped C-gap. Green when the loop is fresh.
 //  GLUCOSE_GUARD_THEME
 //
 
@@ -22,12 +23,15 @@ final class LoopStateView: UIView {
 
     override func tintColorDidChange() {
         super.tintColorDidChange()
-
         updateTintColor()
     }
 
     private func updateTintColor() {
         shapeLayer.strokeColor = tintColor.cgColor
+        shapeLayer.shadowColor = tintColor.cgColor
+        shapeLayer.shadowOpacity = 0.55
+        shapeLayer.shadowRadius = 5
+        shapeLayer.shadowOffset = .zero
     }
 
     var open = false {
@@ -59,9 +63,12 @@ final class LoopStateView: UIView {
     }
 
     private func configureLayer() {
-        shapeLayer.lineWidth = 6
+        clipsToBounds = false
+        shapeLayer.lineWidth = 4.5
         shapeLayer.fillColor = UIColor.clear.cgColor
         shapeLayer.lineCap = .round
+        shapeLayer.lineJoin = .round
+        shapeLayer.strokeEnd = 1
         updateTintColor()
         shapeLayer.path = drawPath()
     }
@@ -74,30 +81,17 @@ final class LoopStateView: UIView {
 
     override func layoutSubviews() {
         super.layoutSubviews()
-
         shapeLayer.path = drawPath()
-        let inset = max(8, shapeLayer.lineWidth + 3)
+        let inset = shapeLayer.lineWidth + 5
         markView.frame = bounds.insetBy(dx: inset, dy: inset)
-        markView.layer.cornerRadius = markView.bounds.width * 0.22
+        markView.layer.cornerRadius = min(markView.bounds.width, markView.bounds.height) / 2
     }
 
     private func drawPath(lineWidth: CGFloat? = nil) -> CGPath {
-        let center = CGPoint(x: bounds.midX, y: bounds.midY)
-        let lineWidth = lineWidth ?? shapeLayer.lineWidth
-        let radius = min(bounds.width / 2, bounds.height / 2) - lineWidth / 2
-
-        let startAngle = open ? -CGFloat.pi / 4 : 0
-        let endAngle = open ? 5 * CGFloat.pi / 4 : 2 * CGFloat.pi
-
-        let path = UIBezierPath(
-            arcCenter: center,
-            radius: radius,
-            startAngle: startAngle,
-            endAngle: endAngle,
-            clockwise: true
-        )
-
-        return path.cgPath
+        let stroke = lineWidth ?? shapeLayer.lineWidth
+        let inset = stroke / 2 + 0.5
+        let rect = bounds.insetBy(dx: inset, dy: inset)
+        return UIBezierPath(ovalIn: rect).cgPath
     }
 
     private static let AnimationKey = "com.loudnate.Naterade.breatheAnimation"
@@ -108,11 +102,11 @@ final class LoopStateView: UIView {
                 if animated {
                     let path = CABasicAnimation(keyPath: "path")
                     path.fromValue = shapeLayer.path ?? drawPath()
-                    path.toValue = drawPath(lineWidth: 12)
+                    path.toValue = drawPath(lineWidth: 7)
 
                     let width = CABasicAnimation(keyPath: "lineWidth")
                     width.fromValue = shapeLayer.lineWidth
-                    width.toValue = 8
+                    width.toValue = 6
 
                     let group = CAAnimationGroup()
                     group.animations = [path, width]

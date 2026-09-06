@@ -1,59 +1,252 @@
 // GLUCOSE_GUARD_XCODE_DESIGN
-// Native SwiftUI screens matching the Figma mobile theme.
+// Dark, native SwiftUI matching the Figma mobile screens.
 
 private enum GlucoseGuardTheme {
     static let red = Color(red: 0.957, green: 0.200, blue: 0.235)
-    static let green = Color(red: 0.133, green: 0.773, blue: 0.369)
-    static let ink = Color(red: 0.039, green: 0.039, blue: 0.039)
-    static let surface = Color(red: 0.090, green: 0.090, blue: 0.090)
-    static let muted = Color(red: 0.639, green: 0.639, blue: 0.639)
-    static let cardRadius: CGFloat = 18
+    static let redDeep = Color(red: 0.72, green: 0.08, blue: 0.14)
+    static let green = Color(red: 0.22, green: 0.87, blue: 0.52)
+    static let ink = Color(red: 0.02, green: 0.02, blue: 0.03)
+    static let mist = Color(red: 0.07, green: 0.07, blue: 0.09)
+    static let card = Color(red: 0.11, green: 0.11, blue: 0.13)
+    static let muted = Color(red: 0.62, green: 0.62, blue: 0.66)
+    static let hairline = Color.white.opacity(0.10)
+    static let insulin = Color(red: 1.0, green: 0.67, blue: 0.22)
+    static let cardRadius: CGFloat = 26
+}
+
+final class GlucoseGuardHomeState: ObservableObject {
+    @Published var selectedTab = 0
+}
+
+struct GlucoseGuardMark: View {
+    var size: CGFloat = 36
+
+    var body: some View {
+        Image("glucose_guard_mark", bundle: Bundle(for: StatusBarHUDView.self))
+            .resizable()
+            .scaledToFit()
+            .frame(width: size, height: size)
+            .clipShape(RoundedRectangle(cornerRadius: size * 0.22, style: .continuous))
+            .shadow(color: GlucoseGuardTheme.red.opacity(0.35), radius: 8, y: 2)
+    }
+}
+
+struct GlucoseGuardBackdrop: View {
+    var body: some View {
+        ZStack {
+            GlucoseGuardTheme.ink
+            RadialGradient(
+                colors: [GlucoseGuardTheme.red.opacity(0.22), Color.clear],
+                center: .topLeading,
+                startRadius: 20,
+                endRadius: 420
+            )
+            RadialGradient(
+                colors: [GlucoseGuardTheme.green.opacity(0.08), Color.clear],
+                center: .bottomTrailing,
+                startRadius: 10,
+                endRadius: 340
+            )
+        }
+        .ignoresSafeArea()
+    }
+}
+
+struct GlucoseGuardGlass<Content: View>: View {
+    var radius: CGFloat = GlucoseGuardTheme.cardRadius
+    let content: Content
+
+    init(radius: CGFloat = GlucoseGuardTheme.cardRadius, @ViewBuilder content: () -> Content) {
+        self.radius = radius
+        self.content = content()
+    }
+
+    var body: some View {
+        content
+            .padding(18)
+            .background(
+                RoundedRectangle(cornerRadius: radius, style: .continuous)
+                    .fill(GlucoseGuardTheme.card.opacity(0.92))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: radius, style: .continuous)
+                            .stroke(LinearGradient(
+                                colors: [Color.white.opacity(0.18), Color.white.opacity(0.04)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ), lineWidth: 1)
+                    )
+            )
+            .shadow(color: Color.black.opacity(0.45), radius: 18, y: 10)
+    }
+}
+
+struct GlucoseGuardProgressBar: View {
+    let progress: Double
+    var tint: Color = GlucoseGuardTheme.red
+
+    var body: some View {
+        GeometryReader { geo in
+            ZStack(alignment: .leading) {
+                Capsule().fill(Color.white.opacity(0.08))
+                Capsule()
+                    .fill(LinearGradient(colors: [tint, tint.opacity(0.7)], startPoint: .leading, endPoint: .trailing))
+                    .frame(width: max(10, geo.size.width * CGFloat(min(max(progress, 0), 1))))
+                    .shadow(color: tint.opacity(0.55), radius: 6, y: 0)
+            }
+        }
+        .frame(height: 7)
+    }
+}
+
+struct GlucoseGuardPrimaryButton: View {
+    let title: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .font(.headline.weight(.semibold))
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+                .background(
+                    LinearGradient(
+                        colors: [GlucoseGuardTheme.red, GlucoseGuardTheme.redDeep],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .shadow(color: GlucoseGuardTheme.red.opacity(0.38), radius: 16, y: 8)
+        }
+        .buttonStyle(.plain)
+    }
 }
 
 struct GlucoseGuardTabBar: View {
+    @ObservedObject var state: GlucoseGuardHomeState
     var onToday: () -> Void
     var onLearning: () -> Void
     var onHealthway: () -> Void
     var onAdd: () -> Void
 
     var body: some View {
-        HStack(alignment: .bottom, spacing: 0) {
-            tabButton("Today", systemName: "sun.max.fill", action: onToday)
-            tabButton("Learning", systemName: "rectangle.stack.fill", action: onLearning)
-            tabButton("Healthway", systemName: "heart.text.square.fill", action: onHealthway)
-            Button(action: onAdd) {
-                ZStack {
-                    Circle()
-                        .fill(GlucoseGuardTheme.red)
-                        .frame(width: 58, height: 58)
-                        .shadow(color: GlucoseGuardTheme.red.opacity(0.35), radius: 8, y: 3)
-                    Image(systemName: "plus")
-                        .font(.system(size: 26, weight: .bold))
-                        .foregroundColor(.white)
+        ZStack(alignment: .top) {
+            GlucoseGuardTheme.ink.opacity(0.94).ignoresSafeArea(edges: .bottom)
+            Rectangle()
+                .fill(LinearGradient(colors: [Color.white.opacity(0.12), Color.clear], startPoint: .top, endPoint: .bottom))
+                .frame(height: 1)
+            HStack(alignment: .bottom, spacing: 0) {
+                tab("Today", selected: state.selectedTab == 0, action: {
+                    state.selectedTab = 0
+                    onToday()
+                }) {
+                    GlucoseGuardTodayIcon()
                 }
+                tab("Learning", selected: state.selectedTab == 1, action: {
+                    state.selectedTab = 1
+                    onLearning()
+                }) {
+                    GlucoseGuardLearningIcon()
+                }
+                tab("Healthway", selected: state.selectedTab == 2, action: {
+                    state.selectedTab = 2
+                    onHealthway()
+                }) {
+                    GlucoseGuardHealthwayIcon()
+                }
+                Button(action: onAdd) {
+                    VStack(spacing: 5) {
+                        ZStack {
+                            Circle()
+                                .fill(LinearGradient(
+                                    colors: [GlucoseGuardTheme.red, GlucoseGuardTheme.redDeep],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                ))
+                                .frame(width: 64, height: 64)
+                                .shadow(color: GlucoseGuardTheme.red.opacity(0.55), radius: 16, y: 6)
+                            Image(systemName: "plus")
+                                .font(.system(size: 28, weight: .bold))
+                                .foregroundColor(.white)
+                        }
+                        .offset(y: -12)
+                        Text("Log")
+                            .font(.system(size: 10, weight: .semibold))
+                            .tracking(0.6)
+                            .foregroundColor(.white.opacity(0.9))
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(Text("Log bolus, glucose, or food"))
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel(Text("Add"))
-            .padding(.bottom, 2)
+            .padding(.horizontal, 6)
+            .padding(.top, 10)
+            .padding(.bottom, 8)
         }
-        .padding(.horizontal, 10)
-        .padding(.top, 10)
-        .padding(.bottom, 14)
-        .background(GlucoseGuardTheme.ink.edgesIgnoringSafeArea(.bottom))
+        .frame(height: 88)
     }
 
-    private func tabButton(_ title: String, systemName: String, action: @escaping () -> Void) -> some View {
+    private func tab<Icon: View>(_ title: String, selected: Bool, action: @escaping () -> Void, @ViewBuilder icon: () -> Icon) -> some View {
         Button(action: action) {
-            VStack(spacing: 4) {
-                Image(systemName: systemName)
-                    .font(.system(size: 18, weight: .semibold))
+            VStack(spacing: 6) {
+                icon()
+                    .frame(height: 22)
                 Text(title)
-                    .font(.caption2.weight(.semibold))
+                    .font(.system(size: 10, weight: .semibold))
+                    .tracking(0.4)
             }
-            .foregroundColor(.white)
+            .foregroundColor(selected ? GlucoseGuardTheme.red : Color.white.opacity(0.55))
             .frame(maxWidth: .infinity)
         }
         .buttonStyle(.plain)
+    }
+}
+
+struct GlucoseGuardTodayIcon: View {
+    var body: some View {
+        ZStack {
+            Capsule().frame(width: 16, height: 2)
+            ForEach(0..<5, id: \.self) { index in
+                Capsule()
+                    .frame(width: 2, height: index == 2 ? 14 : 10)
+                    .offset(x: CGFloat(index - 2) * 5, y: -7)
+            }
+        }
+        .frame(width: 24, height: 20)
+    }
+}
+
+struct GlucoseGuardLearningIcon: View {
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 3, style: .continuous)
+                .stroke(lineWidth: 1.8)
+                .frame(width: 14, height: 16)
+                .offset(x: 4, y: -3)
+            RoundedRectangle(cornerRadius: 3, style: .continuous)
+                .stroke(lineWidth: 1.8)
+                .frame(width: 14, height: 16)
+                .offset(x: -3, y: 2)
+        }
+        .frame(width: 24, height: 20)
+    }
+}
+
+struct GlucoseGuardHealthwayIcon: View {
+    var body: some View {
+        ZStack {
+            Path { path in
+                path.move(to: CGPoint(x: 2, y: 16))
+                path.addQuadCurve(to: CGPoint(x: 12, y: 8), control: CGPoint(x: 4, y: 4))
+                path.addQuadCurve(to: CGPoint(x: 22, y: 4), control: CGPoint(x: 18, y: 14))
+            }
+            .stroke(style: StrokeStyle(lineWidth: 2, lineCap: .round))
+            Circle().frame(width: 4, height: 4).offset(x: -9, y: 6)
+            Circle().frame(width: 4, height: 4).offset(x: 9, y: -6)
+        }
+        .frame(width: 24, height: 20)
     }
 }
 
@@ -68,56 +261,27 @@ struct GlucoseGuardScreenChrome<Content: View>: View {
 
     var body: some View {
         ZStack {
-            GlucoseGuardTheme.ink.ignoresSafeArea()
-            VStack(alignment: .leading, spacing: 16) {
-                HStack(spacing: 10) {
-                    Image("glucose_guard_mark", bundle: Bundle(for: StatusBarHUDView.self))
-                        .resizable()
-                        .frame(width: 36, height: 36)
-                        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                    Text(title)
-                        .font(.title2.bold())
-                        .foregroundColor(.white)
-                    Spacer()
+            GlucoseGuardBackdrop()
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    HStack(spacing: 12) {
+                        GlucoseGuardMark(size: 40)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("GLUCOSE GUARD")
+                                .font(.system(size: 10, weight: .bold))
+                                .tracking(1.4)
+                                .foregroundColor(GlucoseGuardTheme.muted)
+                            Text(title)
+                                .font(.system(size: 28, weight: .bold, design: .rounded))
+                                .foregroundColor(.white)
+                        }
+                        Spacer()
+                    }
+                    content
                 }
-                content
-                Spacer(minLength: 0)
-            }
-            .padding(20)
-        }
-    }
-}
-
-struct GlucoseGuardCard<Content: View>: View {
-    let content: Content
-
-    init(@ViewBuilder content: () -> Content) {
-        self.content = content()
-    }
-
-    var body: some View {
-        content
-            .padding(16)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(GlucoseGuardTheme.surface)
-            .clipShape(RoundedRectangle(cornerRadius: GlucoseGuardTheme.cardRadius, style: .continuous))
-    }
-}
-
-struct GlucoseGuardProgressBar: View {
-    let progress: Double
-    var tint: Color = GlucoseGuardTheme.red
-
-    var body: some View {
-        GeometryReader { geo in
-            ZStack(alignment: .leading) {
-                Capsule().fill(Color.white.opacity(0.12))
-                Capsule()
-                    .fill(tint)
-                    .frame(width: max(8, geo.size.width * CGFloat(min(max(progress, 0), 1))))
+                .padding(20)
             }
         }
-        .frame(height: 8)
     }
 }
 
@@ -126,57 +290,91 @@ struct GlucoseGuardCGMDetailView: View {
     let minutesAgo: String
     let remainingDays: Double
     let sensorLifeDays: Double
-    let average: String
-    let onOpenCGM: () -> Void
+    let averages: [(Int, String)]
+    let onChooseSource: () -> Void
 
     var body: some View {
         GlucoseGuardScreenChrome("CGM") {
-            GlucoseGuardCard {
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Image(systemName: "waveform.path.ecg")
-                            .foregroundColor(GlucoseGuardTheme.red)
-                        Text(String(format: NSLocalizedString("Sensor expires in %.0f days", comment: "CGM remaining life"), remainingDays))
-                            .font(.headline)
-                            .foregroundColor(.white)
-                    }
-                    GlucoseGuardProgressBar(progress: 1 - (remainingDays / max(sensorLifeDays, 1)))
-                    Text(String(format: NSLocalizedString("%.0f of %.0f days remaining", comment: "CGM life caption"), remainingDays, sensorLifeDays))
-                        .font(.footnote)
-                        .foregroundColor(GlucoseGuardTheme.muted)
-                    HStack {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Last Reading")
-                                .font(.caption)
-                                .foregroundColor(GlucoseGuardTheme.muted)
-                            Text(lastReading)
-                                .font(.title.bold())
-                                .foregroundColor(.white)
+            VStack(alignment: .leading, spacing: 16) {
+                GlucoseGuardGlass {
+                    VStack(alignment: .leading, spacing: 16) {
+                        HStack(alignment: .top, spacing: 12) {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .fill(GlucoseGuardTheme.red.opacity(0.16))
+                                    .frame(width: 42, height: 42)
+                                Image(systemName: "waveform.path.ecg")
+                                    .foregroundColor(GlucoseGuardTheme.red)
+                            }
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text("SENSOR EXPIRES IN")
+                                    .font(.system(size: 10, weight: .bold))
+                                    .tracking(1.1)
+                                    .foregroundColor(GlucoseGuardTheme.muted)
+                                Text(String(format: NSLocalizedString("%.0f days", comment: "CGM remaining days"), remainingDays))
+                                    .font(.system(size: 28, weight: .bold, design: .rounded))
+                                    .foregroundColor(.white)
+                                GlucoseGuardProgressBar(progress: 1 - (remainingDays / max(sensorLifeDays, 1)))
+                                Text(String(format: NSLocalizedString("%.0f of %.0f days remaining", comment: "CGM life caption"), remainingDays, sensorLifeDays))
+                                    .font(.caption)
+                                    .foregroundColor(GlucoseGuardTheme.muted)
+                            }
                         }
-                        Spacer()
-                        Label(minutesAgo, systemImage: "clock")
-                            .foregroundColor(GlucoseGuardTheme.red)
-                    }
-                    HStack {
-                        Text("AVG")
-                            .foregroundColor(GlucoseGuardTheme.muted)
-                        Spacer()
-                        Text(average)
-                            .foregroundColor(.white)
-                            .font(.headline)
+                        Divider().overlay(GlucoseGuardTheme.hairline)
+                        HStack(alignment: .bottom) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("LAST READING")
+                                    .font(.system(size: 10, weight: .bold))
+                                    .tracking(1.1)
+                                    .foregroundColor(GlucoseGuardTheme.muted)
+                                Text(lastReading)
+                                    .font(.system(size: 34, weight: .bold, design: .rounded))
+                                    .foregroundColor(.white)
+                            }
+                            Spacer()
+                            HStack(spacing: 6) {
+                                Image(systemName: "arrow.triangle.2.circlepath")
+                                Text(minutesAgo)
+                            }
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(GlucoseGuardTheme.green)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(GlucoseGuardTheme.green.opacity(0.12))
+                            .clipShape(Capsule())
+                        }
                     }
                 }
+
+                GlucoseGuardGlass {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("AVG")
+                            .font(.system(size: 13, weight: .bold))
+                            .tracking(1.2)
+                            .foregroundColor(GlucoseGuardTheme.muted)
+                        Text(NSLocalizedString("Average glucose for the last 3, 7, 30, and 90 days.", comment: "CGM AVG help"))
+                            .font(.footnote)
+                            .foregroundColor(GlucoseGuardTheme.muted)
+                        ForEach(averages, id: \.0) { item in
+                            HStack {
+                                Text("\(item.0)d")
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundColor(GlucoseGuardTheme.muted)
+                                Spacer()
+                                Text(item.1)
+                                    .font(.title3.monospacedDigit().weight(.semibold))
+                                    .foregroundColor(.white)
+                            }
+                            .padding(.vertical, 4)
+                        }
+                    }
+                }
+
+                GlucoseGuardPrimaryButton(
+                    title: NSLocalizedString("LibreLinkUp or Dexcom Share", comment: "CGM source overlay"),
+                    action: onChooseSource
+                )
             }
-            Button(action: onOpenCGM) {
-                Text("LibreLinkUp, Dexcom Share, or CGM settings")
-                    .font(.headline)
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(GlucoseGuardTheme.red)
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-            }
-            .padding(.top, 8)
         }
     }
 }
@@ -184,61 +382,116 @@ struct GlucoseGuardCGMDetailView: View {
 struct GlucoseGuardPumpDetailView: View {
     let pumpName: String
     let remainingDays: Double
+    let remainingHours: Double
     let podLifeDays: Double
     let basal: String
     let remainingInsulin: String
+    let currentBolus: String
     let onChangeBolus: () -> Void
     let onOpenPump: () -> Void
 
     var body: some View {
         GlucoseGuardScreenChrome(pumpName) {
-            GlucoseGuardCard {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text(String(format: NSLocalizedString("Pod expires in %.1f days", comment: "Pump remaining life"), remainingDays))
-                        .font(.headline)
-                        .foregroundColor(.white)
-                    GlucoseGuardProgressBar(progress: 1 - (remainingDays / max(podLifeDays, 1)), tint: .orange)
-                    Text(String(format: NSLocalizedString("%.1f of %.0f days remaining", comment: "Pump life caption"), remainingDays, podLifeDays))
-                        .font(.footnote)
-                        .foregroundColor(GlucoseGuardTheme.muted)
-                    HStack {
-                        VStack(alignment: .leading) {
-                            Text("Planned basal")
-                                .font(.caption)
-                                .foregroundColor(GlucoseGuardTheme.muted)
-                            Text(basal)
+            VStack(alignment: .leading, spacing: 16) {
+                GlucoseGuardGlass {
+                    VStack(spacing: 18) {
+                        HStack {
+                            Text(pumpName)
                                 .font(.headline)
                                 .foregroundColor(.white)
+                            Spacer()
+                            HStack(spacing: 6) {
+                                Circle().fill(GlucoseGuardTheme.green).frame(width: 7, height: 7)
+                                Image(systemName: "antenna.radiowaves.left.and.right")
+                            }
+                            .foregroundColor(GlucoseGuardTheme.green)
                         }
-                        Spacer()
-                        VStack(alignment: .trailing) {
-                            Text("Remaining insulin")
-                                .font(.caption)
+                        ZStack {
+                            Circle()
+                                .fill(RadialGradient(
+                                    colors: [Color.white.opacity(0.14), Color.white.opacity(0.03)],
+                                    center: .center,
+                                    startRadius: 4,
+                                    endRadius: 70
+                                ))
+                                .frame(width: 120, height: 120)
+                            Image(systemName: "oval.portrait.fill")
+                                .font(.system(size: 62))
+                                .foregroundColor(.white.opacity(0.92))
+                                .shadow(color: Color.white.opacity(0.25), radius: 12)
+                        }
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(NSLocalizedString("Pod expires in", comment: "Pump remaining life label").uppercased())
+                                .font(.system(size: 10, weight: .bold))
+                                .tracking(1.1)
                                 .foregroundColor(GlucoseGuardTheme.muted)
-                            Text(remainingInsulin)
-                                .font(.headline)
-                                .foregroundColor(.orange)
+                            Text(podExpiryText)
+                                .font(.system(size: 26, weight: .bold, design: .rounded))
+                                .foregroundColor(.white)
+                            GlucoseGuardProgressBar(progress: 1 - (remainingDays / max(podLifeDays, 1)), tint: GlucoseGuardTheme.insulin)
+                        }
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(NSLocalizedString("Planned basal", comment: "Pump basal label").uppercased())
+                                    .font(.system(size: 10, weight: .bold))
+                                    .tracking(0.8)
+                                    .foregroundColor(GlucoseGuardTheme.muted)
+                                Text(basal)
+                                    .font(.title3.weight(.semibold))
+                                    .foregroundColor(.white)
+                            }
+                            Spacer()
+                            VStack(alignment: .trailing, spacing: 4) {
+                                Text(NSLocalizedString("Remaining insulin", comment: "Pump reservoir label").uppercased())
+                                    .font(.system(size: 10, weight: .bold))
+                                    .tracking(0.8)
+                                    .foregroundColor(GlucoseGuardTheme.muted)
+                                HStack(spacing: 6) {
+                                    Image(systemName: "drop.fill")
+                                        .foregroundColor(GlucoseGuardTheme.insulin)
+                                    Text(remainingInsulin)
+                                        .font(.title3.bold())
+                                        .foregroundColor(.white)
+                                }
+                            }
                         }
                     }
                 }
-            }
-            Button(action: onChangeBolus) {
-                Text("Current bolus — change")
-                    .font(.headline)
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(GlucoseGuardTheme.red)
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-            }
-            Button(action: onOpenPump) {
-                Text("Open pump settings")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
+
+                GlucoseGuardGlass {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text(NSLocalizedString("Current bolus", comment: "Pump bolus card").uppercased())
+                            .font(.system(size: 10, weight: .bold))
+                            .tracking(1.1)
+                            .foregroundColor(GlucoseGuardTheme.muted)
+                        Text(currentBolus)
+                            .font(.system(size: 32, weight: .bold, design: .rounded))
+                            .foregroundColor(.white)
+                        GlucoseGuardPrimaryButton(
+                            title: NSLocalizedString("Change bolus", comment: "Change current bolus"),
+                            action: onChangeBolus
+                        )
+                    }
+                }
+
+                Button(action: onOpenPump) {
+                    Text(NSLocalizedString("Open pump settings", comment: "Open Loop pump UI"))
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(GlucoseGuardTheme.muted)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                }
             }
         }
+    }
+
+    private var podExpiryText: String {
+        let days = Int(remainingDays)
+        let hours = Int((remainingDays - Double(days)) * 24)
+        if days <= 0 {
+            return String(format: NSLocalizedString("%d hours", comment: "Pod hours remaining"), max(hours, Int(remainingHours)))
+        }
+        return String(format: NSLocalizedString("%d days %d hours", comment: "Pod days and hours remaining"), days, hours)
     }
 }
 
@@ -248,76 +501,77 @@ struct GlucoseGuardLearningView: View {
 
     var body: some View {
         GlucoseGuardStatisticsView(displayUnit: displayUnit, loader: loader)
-            .background(GlucoseGuardTheme.ink.ignoresSafeArea())
     }
 }
 
 struct GlucoseGuardHealthwayView: View {
     let currentGlucose: String
+    let readingTime: String
     let a1c: String
     let average: String
     let tir: String
     let points: [Double]
 
-    @State private var range = 1
+    @State private var range = 7
 
     var body: some View {
-        ZStack {
-            Color(red: 0.980, green: 0.980, blue: 0.980).ignoresSafeArea()
+        GlucoseGuardScreenChrome("Glucose Values") {
             VStack(alignment: .leading, spacing: 16) {
-                HStack(spacing: 10) {
-                    Image("glucose_guard_mark", bundle: Bundle(for: StatusBarHUDView.self))
-                        .resizable()
-                        .frame(width: 36, height: 36)
-                        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                    Text("Glucose Values")
-                        .font(.title2.bold())
-                    Spacer()
-                }
-                Picker("Range", selection: $range) {
-                    Text("Day").tag(1)
-                    Text("Week").tag(7)
-                    Text("Month").tag(30)
-                    Text("Year").tag(365)
-                }
-                .pickerStyle(.segmented)
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack {
-                        Text("Glucose")
-                            .foregroundColor(GlucoseGuardTheme.muted)
-                        Spacer()
-                        Text(currentGlucose)
-                            .foregroundColor(GlucoseGuardTheme.green)
-                            .font(.headline)
-                    }
-                    GlucoseGuardSparkline(points: points)
-                        .frame(height: 160)
-                    HStack {
-                        metric("A1C", a1c)
-                        metric("AVG", average)
-                        metric("TIR", tir)
+                HStack(spacing: 8) {
+                    ForEach([(1, "Day"), (7, "Week"), (30, "Month"), (365, "Year")], id: \.0) { item in
+                        Button {
+                            range = item.0
+                        } label: {
+                            Text(item.1)
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundColor(range == item.0 ? .white : GlucoseGuardTheme.muted)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 10)
+                                .background(range == item.0 ? GlucoseGuardTheme.red : Color.white.opacity(0.05))
+                                .clipShape(Capsule())
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
-                .padding(16)
-                .background(Color.white)
-                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-                .shadow(color: Color.black.opacity(0.06), radius: 8, y: 3)
-                Spacer()
+                GlucoseGuardGlass {
+                    VStack(alignment: .leading, spacing: 14) {
+                        HStack {
+                            Text("GLUCOSE / \(readingTime)")
+                                .font(.system(size: 10, weight: .bold))
+                                .tracking(1.0)
+                                .foregroundColor(GlucoseGuardTheme.muted)
+                            Spacer()
+                            Text(currentGlucose)
+                                .font(.title3.bold())
+                                .foregroundColor(GlucoseGuardTheme.green)
+                        }
+                        GlucoseGuardSparkline(points: points)
+                            .frame(height: 188)
+                        HStack(spacing: 10) {
+                            metric("A1C", a1c)
+                            metric("AVG", average)
+                            metric("TIR", tir)
+                        }
+                    }
+                }
             }
-            .padding(20)
         }
     }
 
     private func metric(_ title: String, _ value: String) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title)
-                .font(.caption)
+                .font(.system(size: 10, weight: .bold))
+                .tracking(1.0)
                 .foregroundColor(GlucoseGuardTheme.muted)
             Text(value)
                 .font(.headline)
-                .foregroundColor(GlucoseGuardTheme.red)
+                .foregroundColor(.white)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(Color.white.opacity(0.04))
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 }
 
@@ -326,10 +580,20 @@ struct GlucoseGuardSparkline: View {
 
     var body: some View {
         GeometryReader { geo in
-            let values = points.isEmpty ? [90, 110, 95, 130, 100] : points
-            let minV = (values.min() ?? 0) - 10
-            let maxV = (values.max() ?? 1) + 10
+            let values = points.isEmpty ? [90, 110, 95, 130, 100, 118, 102] : points
+            let minV = min(values.min() ?? 0, 70) - 10
+            let maxV = max(values.max() ?? 1, 180) + 10
             let span = max(maxV - minV, 1)
+            Path { path in
+                path.move(to: CGPoint(x: 0, y: geo.size.height * (1 - CGFloat((70 - minV) / span))))
+                path.addLine(to: CGPoint(x: geo.size.width, y: geo.size.height * (1 - CGFloat((70 - minV) / span))))
+            }
+            .stroke(Color.white.opacity(0.12), style: StrokeStyle(lineWidth: 1, dash: [4, 4]))
+            Path { path in
+                path.move(to: CGPoint(x: 0, y: geo.size.height * (1 - CGFloat((180 - minV) / span))))
+                path.addLine(to: CGPoint(x: geo.size.width, y: geo.size.height * (1 - CGFloat((180 - minV) / span))))
+            }
+            .stroke(GlucoseGuardTheme.green.opacity(0.28), style: StrokeStyle(lineWidth: 1, dash: [4, 4]))
             Path { path in
                 for (index, value) in values.enumerated() {
                     let x = geo.size.width * CGFloat(index) / CGFloat(max(values.count - 1, 1))
@@ -344,7 +608,7 @@ struct GlucoseGuardSparkline: View {
                 path.addLine(to: CGPoint(x: geo.size.width, y: geo.size.height))
                 path.closeSubpath()
             }
-            .fill(GlucoseGuardTheme.red.opacity(0.28))
+            .fill(LinearGradient(colors: [GlucoseGuardTheme.red.opacity(0.38), Color.clear], startPoint: .top, endPoint: .bottom))
             Path { path in
                 for (index, value) in values.enumerated() {
                     let x = geo.size.width * CGFloat(index) / CGFloat(max(values.count - 1, 1))
@@ -356,7 +620,8 @@ struct GlucoseGuardSparkline: View {
                     }
                 }
             }
-            .stroke(GlucoseGuardTheme.red, lineWidth: 2)
+            .stroke(GlucoseGuardTheme.red, lineWidth: 2.4)
+            .shadow(color: GlucoseGuardTheme.red.opacity(0.55), radius: 8)
         }
     }
 }

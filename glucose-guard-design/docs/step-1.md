@@ -7,16 +7,11 @@ Branding source of truth for the Loop iOS fork (`iDustbin/LoopWorkspace`).
 - App name: **GlucoseGuard** on the Home Screen (rewrites Loop `InfoPlist.xcstrings`)
 - Robot-cross logo on brand red (`#F4333C`)
 - iOS and watchOS override app icons
-- Native **Xcode/SwiftUI** screens from the Figma mobile theme:
-  - Accent / glucose charts in brand red, closed-loop ring in green (`#22C55E`)
-  - Logo inside the loop status ring
-  - SwiftUI tab bar: **Today · Learning · Healthway · +**
-  - CGM detail: 14-day sensor bar, last reading, AVG
-  - Pump detail: 3-day pod bar, basal, change bolus
-  - Learning: 3 / 7 / 30 / 90 day AVG, SD, **A1C**, TIR / TBR / TAR
-  - Healthway: Glucose Values dashboard
-  - Bolus: current recommended amount plus **Change Bolus**
-  - Add CGM overlay lists LibreLinkUp and Dexcom Share
+- Loop’s Today HUD and predicted-glucose charts stay — Figma is the direction, not a replacement
+  - Full green/white circle around the logo (no chopped C-gap)
+  - Dark Loop chrome, brand red, OneDrop-style **Today · Learning · Healthway · +**
+  - CGM / pump taps open Figma-inspired detail sheets (14-day sensor, 3-day pod, change bolus)
+  - Learning: dark STATISTIKEN (AVG, SD, **A1C**, TIR / TBR / TAR)
 - **4. Build Loop** applies this tree in the Xcode checkout, then Fastlane uploads TestFlight
 
 ## Not in this step

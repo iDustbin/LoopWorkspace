@@ -11,60 +11,72 @@ private struct GlucoseGuardStatisticsView: View {
     private let periods = [3, 7, 30, 90]
 
     var body: some View {
-        List {
-            Section(header: Text(NSLocalizedString("Period", comment: "Statistics period header"))) {
-                Picker(NSLocalizedString("Period", comment: "Statistics period picker"), selection: $periodDays) {
-                    ForEach(periods, id: \.self) { days in
-                        Text("\(days)d").tag(days)
+        ZStack {
+            Color(red: 0.039, green: 0.039, blue: 0.039).ignoresSafeArea()
+            ScrollView {
+                VStack(alignment: .leading, spacing: 22) {
+                    Text("STATISTIKEN")
+                        .font(.title.bold())
+                        .foregroundColor(.white)
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text(NSLocalizedString("Period", comment: "Statistics period header"))
+                            .font(.caption)
+                            .foregroundColor(Color(red: 0.639, green: 0.639, blue: 0.639))
+                        HStack(spacing: 8) {
+                            ForEach(periods, id: \.self) { days in
+                                Button {
+                                    periodDays = days
+                                    reload()
+                                } label: {
+                                    Text("\(days)d")
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundColor(periodDays == days ? .white : Color(red: 0.639, green: 0.639, blue: 0.639))
+                                        .padding(.horizontal, 14)
+                                        .padding(.vertical, 8)
+                                        .background(periodDays == days ? Color(red: 0.957, green: 0.200, blue: 0.235) : Color(red: 0.173, green: 0.173, blue: 0.173))
+                                        .clipShape(Capsule())
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
                     }
+                    metricRow(
+                        title: "AVG",
+                        value: formattedAverage,
+                        detail: NSLocalizedString("Average glucose for the selected days.", comment: "AVG help")
+                    )
+                    metricRow(
+                        title: "SD",
+                        value: formattedSD,
+                        detail: NSLocalizedString("Standard deviation of glucose.", comment: "SD help")
+                    )
+                    metricRow(
+                        title: "A1C",
+                        value: formattedA1C,
+                        detail: NSLocalizedString("Estimated A1C from mean glucose (GMI formula).", comment: "A1C help")
+                    )
+                    metricRow(title: "TIR", value: formattedPercent(inRange), detail: NSLocalizedString("Time in range, 70–180 mg/dL.", comment: "TIR help"))
+                    metricRow(title: "TBR", value: formattedPercent(belowRange), detail: NSLocalizedString("Time below 70 mg/dL.", comment: "TBR help"))
+                    metricRow(title: "TAR", value: formattedPercent(aboveRange), detail: NSLocalizedString("Time above 180 mg/dL.", comment: "TAR help"))
                 }
-                .pickerStyle(.segmented)
-                .onChange(of: periodDays) { _ in
-                    reload()
-                }
+                .padding(20)
             }
-
-            Section(header: Text(NSLocalizedString("Glucose", comment: "Statistics glucose header"))) {
-                metricRow(
-                    title: "AVG",
-                    value: formattedAverage,
-                    detail: NSLocalizedString("Average glucose for the selected days.", comment: "AVG help")
-                )
-                metricRow(
-                    title: "SD",
-                    value: formattedSD,
-                    detail: NSLocalizedString("Standard deviation of glucose.", comment: "SD help")
-                )
-                metricRow(
-                    title: "A1C",
-                    value: formattedA1C,
-                    detail: NSLocalizedString("Estimated A1C from mean glucose (GMI formula).", comment: "A1C help")
-                )
-            }
-
-            Section(header: Text(NSLocalizedString("Time in range", comment: "TIR section header"))) {
-                metricRow(title: "TIR", value: formattedPercent(inRange), detail: NSLocalizedString("70–180 mg/dL.", comment: "TIR help"))
-                metricRow(title: "TBR", value: formattedPercent(belowRange), detail: NSLocalizedString("Below 70 mg/dL.", comment: "TBR help"))
-                metricRow(title: "TAR", value: formattedPercent(aboveRange), detail: NSLocalizedString("Above 180 mg/dL.", comment: "TAR help"))
-            }
-        }
-        .listStyle(.insetGrouped)
-        .overlay {
             if loading {
-                ProgressView()
+                ProgressView().tint(.white)
             } else if valuesMgdl.isEmpty {
                 Text(NSLocalizedString("No glucose values in this period.", comment: "Empty statistics"))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(Color(red: 0.639, green: 0.639, blue: 0.639))
             }
         }
         .onAppear(perform: reload)
     }
 
     private func metricRow(title: String, value: String, detail: String) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline) {
                 Text(title)
                     .font(.headline)
+                    .foregroundColor(.white)
                 Spacer()
                 Text(value)
                     .font(.title2.monospacedDigit())
@@ -72,7 +84,7 @@ private struct GlucoseGuardStatisticsView: View {
             }
             Text(detail)
                 .font(.footnote)
-                .foregroundColor(.secondary)
+                .foregroundColor(Color(red: 0.639, green: 0.639, blue: 0.639))
         }
         .padding(.vertical, 4)
     }

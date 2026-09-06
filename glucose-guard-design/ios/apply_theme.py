@@ -9,6 +9,12 @@ import sys
 from pathlib import Path
 
 MARKER = "GLUCOSE_GUARD_THEME"
+INJECT_MARKERS = (
+    "    // GLUCOSE_GUARD_XCODE_DESIGN host",
+    "    // GLUCOSE_GUARD_THEME home chrome",
+    "// GLUCOSE_GUARD_THEME statistics",
+    "// GLUCOSE_GUARD_XCODE_DESIGN\n",
+)
 
 
 def die(message: str) -> None:
@@ -137,11 +143,42 @@ def apply_hud_chrome(loop: Path) -> None:
     )
 
 
+def strip_injected_overlays(text: str) -> str:
+    indexes = [text.find(marker) for marker in INJECT_MARKERS]
+    indexes = [index for index in indexes if index >= 0]
+    if not indexes:
+        return text
+    return text[: min(indexes)].rstrip() + "\n"
+
+
+def inject_overlays(path: Path) -> None:
+    insert_after = """        present(navigationWrapper, animated: true)
+        deviceManager.analyticsServicesManager.didDisplayBolusScreen()
+    }
+"""
+    overlays = Path(__file__).with_name("overlays")
+    host = (overlays / "GlucoseGuardTabBarHost.swift.txt").read_text(encoding="utf-8")
+    chrome = (overlays / "GlucoseGuardHomeChrome.swift.txt").read_text(encoding="utf-8")
+    stats = (overlays / "GlucoseGuardStatistics.swift.txt").read_text(encoding="utf-8")
+    design = (overlays / "GlucoseGuardXcodeDesign.swift.txt").read_text(encoding="utf-8")
+    text = strip_injected_overlays(path.read_text(encoding="utf-8"))
+    if insert_after not in text:
+        die(f"Could not insert Glucose Guard overlays into {path}")
+    text = text.replace(insert_after, insert_after + "\n" + host + "\n" + chrome + "\n", 1)
+    if not text.endswith("\n"):
+        text += "\n"
+    text += "\n" + stats + "\n\n" + design
+    if not text.endswith("\n"):
+        text += "\n"
+    path.write_text(text, encoding="utf-8")
+    print(f"Wrote Glucose Guard SwiftUI overlays into {path}")
+
+
 def apply_toolbar(loop: Path) -> None:
     path = loop / "Loop" / "View Controllers" / "StatusTableViewController.swift"
     text = path.read_text(encoding="utf-8")
-    if "presentGlucoseGuardLogSheet" in text:
-        print(f"Home chrome already applied in {path}")
+    if "presentGlucoseGuardToday" in text:
+        print(f"Toolbar already rewritten in {path}")
         return
 
     old_setup = """    private func setupToolbarItems() {
@@ -218,28 +255,9 @@ def apply_toolbar(loop: Path) -> None:
     replace_once(
         path,
         "        tableView.backgroundColor = .secondarySystemBackground",
-        "        tableView.backgroundColor = .systemBackground",
+        "        tableView.backgroundColor = UIColor(red: 0.039, green: 0.039, blue: 0.039, alpha: 1)",
+        required=False,
     )
-
-    insert_after = """        present(navigationWrapper, animated: true)
-        deviceManager.analyticsServicesManager.didDisplayBolusScreen()
-    }
-"""
-    chrome = Path(__file__).with_name("overlays") / "GlucoseGuardHomeChrome.swift.txt"
-    stats = Path(__file__).with_name("overlays") / "GlucoseGuardStatistics.swift.txt"
-    chrome_text = chrome.read_text(encoding="utf-8")
-    stats_text = stats.read_text(encoding="utf-8")
-    text = path.read_text(encoding="utf-8")
-    if insert_after not in text:
-        die(f"Could not insert home chrome into {path}")
-    text = text.replace(insert_after, insert_after + "\n" + chrome_text + "\n", 1)
-    if not text.endswith("\n"):
-        text += "\n"
-    text += "\n" + stats_text
-    if not text.endswith("\n"):
-        text += "\n"
-    path.write_text(text, encoding="utf-8")
-    print(f"Inserted Glucose Guard home chrome into {path}")
 
 
 def apply_xcode_design(loop: Path) -> None:
@@ -266,6 +284,7 @@ def apply_xcode_design(loop: Path) -> None:
         """    @objc private func pumpStatusTapped(_ sender: UIGestureRecognizer) {
         presentGlucoseGuardPumpDetail()
     }""",
+        required=False,
     )
     replace_once(
         path,
@@ -273,30 +292,63 @@ def apply_xcode_design(loop: Path) -> None:
         executeHUDTapAction(deviceManager.didTapOnCGMStatus())
     }""",
         """    @objc private func cgmStatusTapped( _ sender: UIGestureRecognizer) {
+        handleGlucoseGuardCGMTap()
+    }""",
+        required=False,
+    )
+    replace_once(
+        path,
+        """    @objc private func cgmStatusTapped( _ sender: UIGestureRecognizer) {
         presentGlucoseGuardCGMDetail()
     }""",
+        """    @objc private func cgmStatusTapped( _ sender: UIGestureRecognizer) {
+        handleGlucoseGuardCGMTap()
+    }""",
+        required=False,
+    )
+    replace_once(
+        path,
+        """        case .hud:
+            let cell = tableView.dequeueReusableCell(withIdentifier: HUDViewTableViewCell.className, for: indexPath) as! HUDViewTableViewCell
+            hudView = cell.hudView
+
+            return cell""",
+        """        case .hud:
+            let cell = tableView.dequeueReusableCell(withIdentifier: HUDViewTableViewCell.className, for: indexPath) as! HUDViewTableViewCell
+            hudView = cell.hudView
+            attachGlucoseGuardHomeHUD(to: cell)
+            return cell""",
+        required=False,
+    )
+    replace_once(
+        path,
+        """        case .hud, .status, .alertWarning:
+            return UITableView.automaticDimension""",
+        """        case .hud:
+            return 108
+        case .status, .alertWarning:
+            return UITableView.automaticDimension""",
+        required=False,
+    )
+    replace_once(
+        path,
+        """                hudView.pumpStatusHUD.presentStatusBadge(self.deviceManager.pumpStatusBadge)
+                hudView.pumpStatusHUD.lifecycleProgress = self.deviceManager.pumpLifecycleProgress
+            }""",
+        """                hudView.pumpStatusHUD.presentStatusBadge(self.deviceManager.pumpStatusBadge)
+                hudView.pumpStatusHUD.lifecycleProgress = self.deviceManager.pumpLifecycleProgress
+                self.refreshGlucoseGuardHomeHUD()
+            }""",
+        required=False,
+    )
+    replace_once(
+        path,
+        "        tableView.backgroundColor = .systemBackground",
+        "        tableView.backgroundColor = UIColor(red: 0.039, green: 0.039, blue: 0.039, alpha: 1)",
+        required=False,
     )
 
-    text = path.read_text(encoding="utf-8")
-    if "installGlucoseGuardTabBar" in text and "GLUCOSE_GUARD_XCODE_DESIGN host" not in text:
-        host = Path(__file__).with_name("overlays") / "GlucoseGuardTabBarHost.swift.txt"
-        insert_after = """        present(navigationWrapper, animated: true)
-        deviceManager.analyticsServicesManager.didDisplayBolusScreen()
-    }
-"""
-        if insert_after not in text:
-            die(f"Could not insert Xcode tab bar host into {path}")
-        text = text.replace(insert_after, insert_after + "\n" + host.read_text(encoding="utf-8") + "\n", 1)
-        path.write_text(text, encoding="utf-8")
-        print(f"Inserted Glucose Guard Xcode tab bar host into {path}")
-
-    text = path.read_text(encoding="utf-8")
-    if "GLUCOSE_GUARD_XCODE_DESIGN\n" not in text:
-        design = Path(__file__).with_name("overlays") / "GlucoseGuardXcodeDesign.swift.txt"
-        if not text.endswith("\n"):
-            text += "\n"
-        path.write_text(text + "\n" + design.read_text(encoding="utf-8"), encoding="utf-8")
-        print(f"Appended Glucose Guard Xcode design screens to {path}")
+    inject_overlays(path)
 
 
 def apply_bolus_and_settings(loop: Path) -> None:

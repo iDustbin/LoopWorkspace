@@ -57,6 +57,8 @@ def test_figma_device_screens() -> None:
     assert "LibreView" in screens
     assert "Dexcom Share" in screens
     assert "Emergency Contacts" in screens
+    assert "GlucoseGuardJourneyView" in screens
+    assert "My Journey" in screens
     assert "presentGlucoseGuardGlucoseSettings()" in host
     assert "onCGMTapped()" in host
     assert "onPumpTapped()" in host

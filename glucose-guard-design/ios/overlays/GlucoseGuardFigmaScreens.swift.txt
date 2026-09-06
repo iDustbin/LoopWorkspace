@@ -23,6 +23,9 @@ private enum GlucoseGuardDefaults {
     static let dexNick = "gg.dexcomNickname"
     static let dexServer = "gg.dexcomServer"
     static let lastAlert = "gg.lastAlertAt"
+    static let a1cGoal = "gg.a1cGoal"
+    static let actualA1c = "gg.actualA1c"
+    static let actualA1cDate = "gg.actualA1cDate"
 }
 
 final class GlucoseGuardPreferences: ObservableObject {
@@ -49,6 +52,11 @@ final class GlucoseGuardPreferences: ObservableObject {
     @Published var libreServer: String { didSet { defaults.set(libreServer, forKey: GlucoseGuardDefaults.libreServer) } }
     @Published var dexcomNickname: String { didSet { defaults.set(dexcomNickname, forKey: GlucoseGuardDefaults.dexNick) } }
     @Published var dexcomServer: String { didSet { defaults.set(dexcomServer, forKey: GlucoseGuardDefaults.dexServer) } }
+    @Published var a1cGoal: Double { didSet { defaults.set(a1cGoal, forKey: GlucoseGuardDefaults.a1cGoal) } }
+    @Published var actualA1c: Double { didSet { defaults.set(actualA1c, forKey: GlucoseGuardDefaults.actualA1c) } }
+    @Published var actualA1cDate: Date? {
+        didSet { defaults.set(actualA1cDate, forKey: GlucoseGuardDefaults.actualA1cDate) }
+    }
 
     init() {
         let store = UserDefaults.standard
@@ -72,6 +80,9 @@ final class GlucoseGuardPreferences: ObservableObject {
         libreServer = store.string(forKey: GlucoseGuardDefaults.libreServer) ?? "APAC"
         dexcomNickname = store.string(forKey: GlucoseGuardDefaults.dexNick) ?? ""
         dexcomServer = store.string(forKey: GlucoseGuardDefaults.dexServer) ?? "APAC"
+        a1cGoal = store.object(forKey: GlucoseGuardDefaults.a1cGoal) as? Double ?? 7.0
+        actualA1c = store.object(forKey: GlucoseGuardDefaults.actualA1c) as? Double ?? 0
+        actualA1cDate = store.object(forKey: GlucoseGuardDefaults.actualA1cDate) as? Date
     }
 
     var lastAlertAt: Date? {
@@ -175,6 +186,7 @@ struct GlucoseGuardToggleRow: View {
 }
 
 struct GlucoseGuardProfileView: View {
+    let onJourney: () -> Void
     let onGlucoseSettings: () -> Void
     let onConnections: () -> Void
     let onEmergency: () -> Void
@@ -185,6 +197,8 @@ struct GlucoseGuardProfileView: View {
             VStack(spacing: 14) {
                 GlucoseGuardGlass {
                     VStack(spacing: 0) {
+                        GlucoseGuardNavRow(title: NSLocalizedString("My Journey", comment: "Open My Journey"), action: onJourney)
+                        Divider().overlay(GlucoseGuardTheme.hairline)
                         GlucoseGuardNavRow(title: NSLocalizedString("Glucose Settings", comment: "Open glucose settings"), action: onGlucoseSettings)
                         Divider().overlay(GlucoseGuardTheme.hairline)
                         GlucoseGuardNavRow(title: NSLocalizedString("Connection Settings", comment: "Open CGM connections"), action: onConnections)
@@ -446,4 +460,340 @@ struct GlucoseGuardEmergencyContactsView: View {
             }
         }
     }
+}
+
+struct GlucoseGuardTimedSample {
+    let date: Date
+    let mgdl: Double
+}
+
+struct GlucoseGuardJourneyView: View {
+    let displayUnit: HKUnit
+    let lastReading: String
+    let lastReadingMgdl: Double?
+    let lastReadingDate: Date?
+    let loader: (Date, @escaping ([GlucoseGuardTimedSample]) -> Void) -> Void
+    let onSettings: () -> Void
+    let onProfile: () -> Void
+
+    @ObservedObject private var prefs = GlucoseGuardPreferences.shared
+    @State private var tab = 0
+    @State private var samples: [GlucoseGuardTimedSample] = []
+
+    var body: some View {
+        ZStack {
+            GlucoseGuardBackdrop()
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    header
+                    tabs
+                    if tab == 0 {
+                        historyCard
+                    } else if tab == 1 {
+                        goalsCard
+                    } else {
+                        GlucoseGuardStatisticsView(displayUnit: displayUnit) { start, completion in
+                            loader(start) { timed in
+                                completion(timed.map(\.mgdl))
+                            }
+                        }
+                    }
+                }
+                .padding(20)
+            }
+        }
+        .onAppear { reload() }
+    }
+
+    private var header: some View {
+        HStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(lastReading)
+                    .font(.system(size: 34, weight: .bold, design: .rounded))
+                    .foregroundColor(statusColor(lastReadingMgdl))
+                Text(NSLocalizedString("My Journey", comment: "Journey title"))
+                    .font(.title3.weight(.semibold))
+                    .foregroundColor(.white)
+                if let lastReadingDate {
+                    Text(glucoseGuardMediumDate(lastReadingDate))
+                        .font(.caption)
+                        .foregroundColor(GlucoseGuardTheme.muted)
+                }
+            }
+            Spacer()
+            Button(action: onSettings) {
+                Image(systemName: "bell")
+                    .foregroundColor(.white)
+                    .frame(width: 36, height: 36)
+                    .background(GlucoseGuardTheme.card)
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            Button(action: onProfile) {
+                Image(systemName: "person.crop.circle")
+                    .foregroundColor(.white)
+                    .frame(width: 36, height: 36)
+                    .background(GlucoseGuardTheme.card)
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private var tabs: some View {
+        HStack(spacing: 18) {
+            tabButton(NSLocalizedString("History", comment: "Journey history tab"), 0)
+            tabButton(NSLocalizedString("Goals", comment: "Journey goals tab"), 1)
+            tabButton(NSLocalizedString("Reports", comment: "Journey reports tab"), 2)
+        }
+    }
+
+    private func tabButton(_ title: String, _ index: Int) -> some View {
+        Button {
+            tab = index
+        } label: {
+            VStack(spacing: 6) {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(tab == index ? GlucoseGuardTheme.red : GlucoseGuardTheme.muted)
+                Rectangle()
+                    .fill(tab == index ? GlucoseGuardTheme.red : Color.clear)
+                    .frame(height: 2)
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var historyCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text(NSLocalizedString("My Health Cards", comment: "Journey cards header"))
+                .font(.headline)
+                .foregroundColor(.white)
+            GlucoseGuardGlass {
+                VStack(alignment: .leading, spacing: 14) {
+                    HStack {
+                        Image(systemName: "drop.fill").foregroundColor(GlucoseGuardTheme.red)
+                        Text(NSLocalizedString("Glucose", comment: "Journey glucose card"))
+                            .font(.headline)
+                            .foregroundColor(.white)
+                        Spacer()
+                        Button(action: onSettings) {
+                            Image(systemName: "gearshape").foregroundColor(GlucoseGuardTheme.muted)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(NSLocalizedString("Hourly Averages", comment: "Hourly averages title"))
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundColor(.white)
+                            Text(NSLocalizedString("Last 14 days", comment: "Fourteen day window"))
+                                .font(.caption)
+                                .foregroundColor(GlucoseGuardTheme.muted)
+                        }
+                        Spacer()
+                        VStack(alignment: .trailing, spacing: 2) {
+                            Text(rangeText)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundColor(.white)
+                            Text(NSLocalizedString("In Range", comment: "In range caption"))
+                                .font(.caption)
+                                .foregroundColor(GlucoseGuardTheme.green)
+                        }
+                    }
+                    GlucoseGuardHourlyChart(samples: samples, low: prefs.lowMgdl, high: prefs.highMgdl)
+                        .frame(height: 160)
+                    journeyRow(
+                        title: NSLocalizedString("Last Reading", comment: "Journey last reading"),
+                        value: lastReading,
+                        subtitle: lastReadingDate.map(glucoseGuardMediumDate),
+                        color: statusColor(lastReadingMgdl)
+                    )
+                    journeyRow(
+                        title: NSLocalizedString("% In Range", comment: "Journey TIR"),
+                        value: tirText,
+                        subtitle: rangeText + " · " + NSLocalizedString("Last 14 days", comment: "Fourteen day window"),
+                        color: GlucoseGuardTheme.green
+                    )
+                    journeyRow(
+                        title: NSLocalizedString("Estimated A1C", comment: "Journey estimated A1C"),
+                        value: estimatedA1C,
+                        subtitle: NSLocalizedString("From mean glucose (GMI).", comment: "GMI caption"),
+                        color: GlucoseGuardTheme.insulin
+                    )
+                    journeyRow(
+                        title: NSLocalizedString("Your A1C Goal", comment: "Journey A1C goal"),
+                        value: String(format: "%.1f%%", prefs.a1cGoal),
+                        color: GlucoseGuardTheme.green
+                    )
+                    journeyRow(
+                        title: NSLocalizedString("Actual A1C", comment: "Journey lab A1C"),
+                        value: prefs.actualA1c > 0 ? String(format: "%.1f%%", prefs.actualA1c) : "—",
+                        subtitle: prefs.actualA1cDate.map(glucoseGuardMediumDate),
+                        color: GlucoseGuardTheme.green
+                    )
+                }
+            }
+        }
+    }
+
+    private var goalsCard: some View {
+        GlucoseGuardGlass {
+            VStack(alignment: .leading, spacing: 16) {
+                Text(NSLocalizedString("Goals", comment: "Journey goals tab"))
+                    .font(.headline)
+                    .foregroundColor(.white)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(NSLocalizedString("A1C Goal", comment: "Editable A1C goal"))
+                        .foregroundColor(.white)
+                    Slider(value: $prefs.a1cGoal, in: 5.0...9.0, step: 0.1)
+                        .tint(GlucoseGuardTheme.red)
+                    Text(String(format: "%.1f%%", prefs.a1cGoal))
+                        .foregroundColor(GlucoseGuardTheme.red)
+                }
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(NSLocalizedString("Actual lab A1C", comment: "Editable lab A1C"))
+                        .foregroundColor(.white)
+                    Slider(value: $prefs.actualA1c, in: 0...14, step: 0.1)
+                        .tint(GlucoseGuardTheme.red)
+                    Text(prefs.actualA1c > 0 ? String(format: "%.1f%%", prefs.actualA1c) : "—")
+                        .foregroundColor(GlucoseGuardTheme.red)
+                    DatePicker(
+                        NSLocalizedString("Lab date", comment: "Actual A1C date"),
+                        selection: Binding(
+                            get: { prefs.actualA1cDate ?? Date() },
+                            set: { prefs.actualA1cDate = $0 }
+                        ),
+                        displayedComponents: [.date, .hourAndMinute]
+                    )
+                    .colorScheme(.dark)
+                    .tint(GlucoseGuardTheme.red)
+                }
+            }
+        }
+    }
+
+    private var values: [Double] { samples.map(\.mgdl) }
+
+    private var estimatedA1C: String {
+        guard !values.isEmpty else { return "—" }
+        let mean = values.reduce(0, +) / Double(values.count)
+        return String(format: "%.1f%%", 3.31 + 0.02392 * mean)
+    }
+
+    private var tirText: String {
+        guard !values.isEmpty else { return "—" }
+        let inRange = values.filter { $0 >= prefs.lowMgdl && $0 <= prefs.highMgdl }.count
+        return String(format: "%.0f%%", (Double(inRange) / Double(values.count)) * 100)
+    }
+
+    private var rangeText: String {
+        let low = HKQuantity(unit: .milligramsPerDeciliter, doubleValue: prefs.lowMgdl).doubleValue(for: displayUnit)
+        let high = HKQuantity(unit: .milligramsPerDeciliter, doubleValue: prefs.highMgdl).doubleValue(for: displayUnit)
+        if displayUnit.unitString.contains("mol") {
+            return String(format: "%.1f–%.1f %@", low, high, displayUnit.unitString)
+        }
+        return String(format: "%.0f–%.0f %@", low, high, displayUnit.unitString)
+    }
+
+    private func journeyRow(title: String, value: String, subtitle: String? = nil, color: Color) -> some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title).foregroundColor(.white)
+                if let subtitle {
+                    Text(subtitle).font(.caption).foregroundColor(GlucoseGuardTheme.muted)
+                }
+            }
+            Spacer()
+            Circle().fill(color).frame(width: 8, height: 8)
+            Text(value)
+                .font(.headline.monospacedDigit())
+                .foregroundColor(.white)
+        }
+        .padding(.vertical, 6)
+    }
+
+    private func statusColor(_ mgdl: Double?) -> Color {
+        guard let mgdl else { return .white }
+        if mgdl < prefs.lowMgdl { return GlucoseGuardTheme.insulin }
+        if mgdl > prefs.highMgdl { return GlucoseGuardTheme.red }
+        return GlucoseGuardTheme.green
+    }
+
+    private func reload() {
+        let start = Calendar.current.date(byAdding: .day, value: -14, to: Date()) ?? Date()
+        loader(start) { samples = $0 }
+    }
+}
+
+struct GlucoseGuardHourlyChart: View {
+    let samples: [GlucoseGuardTimedSample]
+    let low: Double
+    let high: Double
+
+    var body: some View {
+        GeometryReader { geo in
+            let points = hourlyAverages()
+            ZStack(alignment: .topLeading) {
+                if points.isEmpty {
+                    Text(NSLocalizedString("No glucose values in this period.", comment: "Empty journey chart"))
+                        .font(.caption)
+                        .foregroundColor(GlucoseGuardTheme.muted)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    chartMarks(geo: geo, points: points)
+                }
+            }
+        }
+    }
+
+    private func chartMarks(geo: GeometryProxy, points: [Double]) -> some View {
+        let minV = min(points.min() ?? low, low) - 15
+        let maxV = max(points.max() ?? high, high) + 15
+        let span = max(maxV - minV, 1)
+        let bandTop = geo.size.height * (1 - CGFloat((high - minV) / span))
+        let bandBottom = geo.size.height * (1 - CGFloat((low - minV) / span))
+        return ZStack(alignment: .topLeading) {
+            RoundedRectangle(cornerRadius: 4)
+                .fill(GlucoseGuardTheme.green.opacity(0.16))
+                .frame(width: geo.size.width, height: max(8, bandBottom - bandTop))
+                .offset(y: bandTop)
+            Path { path in
+                for (index, value) in points.enumerated() {
+                    let x = geo.size.width * CGFloat(index) / 23
+                    let y = geo.size.height * (1 - CGFloat((value - minV) / span))
+                    if index == 0 { path.move(to: CGPoint(x: x, y: y)) }
+                    else { path.addLine(to: CGPoint(x: x, y: y)) }
+                }
+            }
+            .stroke(GlucoseGuardTheme.red, lineWidth: 2)
+            ForEach(Array(points.enumerated()), id: \.offset) { index, value in
+                Circle()
+                    .fill(value >= low && value <= high ? GlucoseGuardTheme.green : GlucoseGuardTheme.insulin)
+                    .frame(width: 6, height: 6)
+                    .position(
+                        x: geo.size.width * CGFloat(index) / 23,
+                        y: geo.size.height * (1 - CGFloat((value - minV) / span))
+                    )
+            }
+        }
+    }
+
+    private func hourlyAverages() -> [Double] {
+        var buckets = Array(repeating: [Double](), count: 24)
+        for sample in samples {
+            buckets[Calendar.current.component(.hour, from: sample.date)].append(sample.mgdl)
+        }
+        if samples.isEmpty { return [] }
+        return buckets.map { hour in
+            hour.isEmpty ? (low + high) / 2 : hour.reduce(0, +) / Double(hour.count)
+        }
+    }
+}
+
+private func glucoseGuardMediumDate(_ date: Date) -> String {
+    let formatter = DateFormatter()
+    formatter.dateStyle = .medium
+    formatter.timeStyle = .short
+    return formatter.string(from: date)
 }

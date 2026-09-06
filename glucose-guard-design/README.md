@@ -2,7 +2,8 @@
 
 iOS branding for **Glucose Guard**: logo, color tokens, Loop override app icons,
 and native Xcode/SwiftUI screens from the Figma mobile theme
-(Today / Learning / Healthway / +, CGM and pump detail, A1C).
+(Today / Food / Bolus / Profile / +, CGM and pump detail, A1C).
+The left HUD pill shows the current glucose value.
 
 Step 1 is **iOS only**. The Loop fork
 [iDustbin/LoopWorkspace](https://github.com/iDustbin/LoopWorkspace) syncs from
@@ -31,3 +32,9 @@ GLUCOSE_GUARD_DESIGN_PATH=/path/to/glucose-guard-design \
 ```
 
 This folder is the Xcode design source. **4. Build Loop** applies it before Fastlane/TestFlight.
+
+HUD / menu patches are checked against the pinned Loop sources:
+
+```bash
+python3 glucose-guard-design/ios/tests/test_hud_and_menu.py
+```

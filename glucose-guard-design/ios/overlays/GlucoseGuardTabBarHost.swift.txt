@@ -13,8 +13,9 @@
         let bar = GlucoseGuardTabBar(
             state: glucoseGuardHomeState,
             onToday: { [weak self] in self?.presentGlucoseGuardToday() },
-            onLearning: { [weak self] in self?.presentGlucoseGuardLearning() },
-            onHealthway: { [weak self] in self?.presentGlucoseGuardHealthway() },
+            onFood: { [weak self] in self?.presentGlucoseGuardFood() },
+            onBolus: { [weak self] in self?.presentBolusScreen() },
+            onProfile: { [weak self] in self?.presentSettings() },
             onAdd: { [weak self] in self?.presentGlucoseGuardLogSheet() }
         )
         let host = UIHostingController(rootView: bar)
@@ -26,12 +27,12 @@
             host.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             host.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             host.view.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
-            host.view.heightAnchor.constraint(equalToConstant: 88)
+            host.view.heightAnchor.constraint(equalToConstant: 70)
         ])
         host.didMove(toParent: self)
         glucoseGuardTabBarHost = host
-        tableView.contentInset.bottom = 98
-        tableView.verticalScrollIndicatorInsets.bottom = 98
+        tableView.contentInset.bottom = 118
+        tableView.verticalScrollIndicatorInsets.bottom = 118
     }
 
     private func presentGlucoseGuardDesign<Content: View>(_ root: Content, title: String) {
@@ -77,6 +78,16 @@
         })
         sheet.addAction(UIAlertAction(title: NSLocalizedString("Cancel", comment: "Cancel CGM source"), style: .cancel))
         present(sheet, animated: true)
+    }
+
+    private func presentGlucoseGuardFood() {
+        let note = UIAlertController(
+            title: NSLocalizedString("Food", comment: "Food handover title"),
+            message: NSLocalizedString("Food overview is a separate app and is not part of this Loop screen.", comment: "Food handover message"),
+            preferredStyle: .alert
+        )
+        note.addAction(UIAlertAction(title: NSLocalizedString("OK", comment: "Dismiss food handover"), style: .default))
+        present(note, animated: true)
     }
 
     @objc private func presentGlucoseGuardLearning() {

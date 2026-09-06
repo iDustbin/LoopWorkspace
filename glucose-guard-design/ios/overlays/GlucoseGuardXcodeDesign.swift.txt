@@ -126,127 +126,80 @@ struct GlucoseGuardPrimaryButton: View {
 struct GlucoseGuardTabBar: View {
     @ObservedObject var state: GlucoseGuardHomeState
     var onToday: () -> Void
-    var onLearning: () -> Void
-    var onHealthway: () -> Void
+    var onFood: () -> Void
+    var onBolus: () -> Void
+    var onProfile: () -> Void
     var onAdd: () -> Void
 
     var body: some View {
-        ZStack(alignment: .top) {
-            GlucoseGuardTheme.ink.opacity(0.94).ignoresSafeArea(edges: .bottom)
-            Rectangle()
-                .fill(LinearGradient(colors: [Color.white.opacity(0.12), Color.clear], startPoint: .top, endPoint: .bottom))
-                .frame(height: 1)
-            HStack(alignment: .bottom, spacing: 0) {
-                tab("Today", selected: state.selectedTab == 0, action: {
-                    state.selectedTab = 0
-                    onToday()
-                }) {
-                    GlucoseGuardTodayIcon()
+        ZStack(alignment: .topTrailing) {
+            VStack(spacing: 0) {
+                Rectangle()
+                    .fill(Color.white.opacity(0.10))
+                    .frame(height: 0.5)
+                HStack(alignment: .bottom, spacing: 0) {
+                    tab("Today", index: 0, systemName: "house", filled: "house.fill", action: onToday)
+                    tab("Food", index: 1, systemName: "fork.knife", filled: "fork.knife", action: onFood)
+                    tab("Bolus", index: 2, systemName: "bolt", filled: "bolt.fill", action: onBolus)
+                    tab("Profile", index: 3, systemName: "person", filled: "person.fill", action: onProfile)
                 }
-                tab("Learning", selected: state.selectedTab == 1, action: {
-                    state.selectedTab = 1
-                    onLearning()
-                }) {
-                    GlucoseGuardLearningIcon()
-                }
-                tab("Healthway", selected: state.selectedTab == 2, action: {
-                    state.selectedTab = 2
-                    onHealthway()
-                }) {
-                    GlucoseGuardHealthwayIcon()
-                }
-                Button(action: onAdd) {
-                    VStack(spacing: 5) {
-                        ZStack {
-                            Circle()
-                                .fill(LinearGradient(
-                                    colors: [GlucoseGuardTheme.red, GlucoseGuardTheme.redDeep],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                ))
-                                .frame(width: 64, height: 64)
-                                .shadow(color: GlucoseGuardTheme.red.opacity(0.55), radius: 16, y: 6)
-                            Image(systemName: "plus")
-                                .font(.system(size: 28, weight: .bold))
-                                .foregroundColor(.white)
-                        }
-                        .offset(y: -12)
-                        Text("Log")
-                            .font(.system(size: 10, weight: .semibold))
-                            .tracking(0.6)
-                            .foregroundColor(.white.opacity(0.9))
-                    }
-                    .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(Text("Log bolus, glucose, or food"))
+                .padding(.horizontal, 2)
+                .padding(.top, 8)
+                .padding(.bottom, 4)
             }
-            .padding(.horizontal, 6)
-            .padding(.top, 10)
-            .padding(.bottom, 8)
+            .background(GlucoseGuardTheme.ink.opacity(0.96))
+
+            Button(action: onAdd) {
+                Image(systemName: "plus")
+                    .font(.system(size: 20, weight: .medium))
+                    .foregroundColor(.white)
+                    .frame(width: 48, height: 48)
+                    .background(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .fill(Color(red: 0.18, green: 0.18, blue: 0.20))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                    .stroke(Color.white.opacity(0.14), lineWidth: 1)
+                            )
+                            .shadow(color: Color.black.opacity(0.45), radius: 10, y: 4)
+                    )
+            }
+            .buttonStyle(.plain)
+            .padding(.trailing, 16)
+            .offset(y: -34)
+            .accessibilityLabel(Text("Log bolus, glucose, or food"))
         }
-        .frame(height: 88)
+        .frame(height: 70)
     }
 
-    private func tab<Icon: View>(_ title: String, selected: Bool, action: @escaping () -> Void, @ViewBuilder icon: () -> Icon) -> some View {
-        Button(action: action) {
-            VStack(spacing: 6) {
-                icon()
-                    .frame(height: 22)
+    private func tab(_ title: String, index: Int, systemName: String, filled: String, action: @escaping () -> Void) -> some View {
+        let selected = state.selectedTab == index
+        return Button {
+            state.selectedTab = index
+            action()
+        } label: {
+            VStack(spacing: 5) {
+                ZStack {
+                    if selected {
+                        Circle()
+                            .fill(GlucoseGuardTheme.red.opacity(0.38))
+                            .frame(width: 34, height: 34)
+                            .blur(radius: 9)
+                    }
+                    Image(systemName: selected ? filled : systemName)
+                        .font(.system(size: 20, weight: selected ? .semibold : .regular))
+                }
+                .frame(height: 24)
                 Text(title)
                     .font(.system(size: 10, weight: .semibold))
-                    .tracking(0.4)
+                Capsule()
+                    .fill(selected ? GlucoseGuardTheme.red : Color.clear)
+                    .frame(width: 22, height: 2)
             }
-            .foregroundColor(selected ? GlucoseGuardTheme.red : Color.white.opacity(0.55))
+            .foregroundColor(selected ? GlucoseGuardTheme.red : Color.white)
             .frame(maxWidth: .infinity)
         }
         .buttonStyle(.plain)
-    }
-}
-
-struct GlucoseGuardTodayIcon: View {
-    var body: some View {
-        ZStack {
-            Capsule().frame(width: 16, height: 2)
-            ForEach(0..<5, id: \.self) { index in
-                Capsule()
-                    .frame(width: 2, height: index == 2 ? 14 : 10)
-                    .offset(x: CGFloat(index - 2) * 5, y: -7)
-            }
-        }
-        .frame(width: 24, height: 20)
-    }
-}
-
-struct GlucoseGuardLearningIcon: View {
-    var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 3, style: .continuous)
-                .stroke(lineWidth: 1.8)
-                .frame(width: 14, height: 16)
-                .offset(x: 4, y: -3)
-            RoundedRectangle(cornerRadius: 3, style: .continuous)
-                .stroke(lineWidth: 1.8)
-                .frame(width: 14, height: 16)
-                .offset(x: -3, y: 2)
-        }
-        .frame(width: 24, height: 20)
-    }
-}
-
-struct GlucoseGuardHealthwayIcon: View {
-    var body: some View {
-        ZStack {
-            Path { path in
-                path.move(to: CGPoint(x: 2, y: 16))
-                path.addQuadCurve(to: CGPoint(x: 12, y: 8), control: CGPoint(x: 4, y: 4))
-                path.addQuadCurve(to: CGPoint(x: 22, y: 4), control: CGPoint(x: 18, y: 14))
-            }
-            .stroke(style: StrokeStyle(lineWidth: 2, lineCap: .round))
-            Circle().frame(width: 4, height: 4).offset(x: -9, y: 6)
-            Circle().frame(width: 4, height: 4).offset(x: 9, y: -6)
-        }
-        .frame(width: 24, height: 20)
     }
 }
 

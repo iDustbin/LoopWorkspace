@@ -9,7 +9,8 @@ Branding source of truth for the Loop iOS fork (`iDustbin/LoopWorkspace`).
 - iOS and watchOS override app icons
 - Loop’s Today HUD and predicted-glucose charts stay — Figma is the direction, not a replacement
   - Full green/white circle around the logo (no chopped C-gap)
-  - Dark Loop chrome, brand red, OneDrop-style **Today · Learning · Healthway · +**
+  - Dark Loop chrome, brand red, Figma menu **Today · Food · Bolus · Profile** plus a floating **+**
+  - Left HUD pill keeps the **current glucose value** (sensor days stay in CGM detail)
   - CGM / pump taps open Figma-inspired detail sheets (14-day sensor, 3-day pod, change bolus)
   - Learning: dark STATISTIKEN (AVG, SD, **A1C**, TIR / TBR / TAR)
 - **4. Build Loop** applies this tree in the Xcode checkout, then Fastlane uploads TestFlight

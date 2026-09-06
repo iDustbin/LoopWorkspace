@@ -11,7 +11,8 @@ Branding source of truth for the Loop iOS fork (`iDustbin/LoopWorkspace`).
   - Full green/white circle around the logo (no chopped C-gap)
   - Dark Loop chrome, brand red, Figma menu **Today · Food · Bolus · Profile** plus a floating **+**
   - Left HUD pill keeps the **current glucose value** (sensor days stay in CGM detail)
-  - CGM / pump taps open Figma-inspired detail sheets (14-day sensor, 3-day pod, change bolus)
+  - CGM / pump taps open the Figma simulator layouts as the **real** device screens (expiry, last reading, stop sensor, suspend, replace, device details)
+  - Glucose Settings, alarms, LibreView / Dexcom Share account screens, Emergency Contacts (Phone + WhatsApp)
   - Learning: dark STATISTIKEN (AVG, SD, **A1C**, TIR / TBR / TAR)
 - **4. Build Loop** applies this tree in the Xcode checkout, then Fastlane uploads TestFlight
 

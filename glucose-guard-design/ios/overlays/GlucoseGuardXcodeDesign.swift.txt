@@ -16,6 +16,9 @@ private enum GlucoseGuardTheme {
 
 final class GlucoseGuardHomeState: ObservableObject {
     @Published var selectedTab = 0
+    @Published var lastReading = "— — —"
+    @Published var minutesAgo = "0 min"
+    @Published var unitLabel = "mmol/L"
 }
 
 struct GlucoseGuardMark: View {
@@ -238,97 +241,138 @@ struct GlucoseGuardScreenChrome<Content: View>: View {
     }
 }
 
-struct GlucoseGuardCGMDetailView: View {
-    let lastReading: String
-    let minutesAgo: String
-    let remainingDays: Double
-    let sensorLifeDays: Double
-    let averages: [(Int, String)]
-    let onChooseSource: () -> Void
+struct GlucoseGuardNavRow: View {
+    let title: String
+    var value: String? = nil
+    var destructive: Bool = false
+    let action: () -> Void
 
     var body: some View {
-        GlucoseGuardScreenChrome("CGM") {
+        Button(action: action) {
+            HStack {
+                Text(title)
+                    .font(.body.weight(.medium))
+                    .foregroundColor(destructive ? GlucoseGuardTheme.red : .white)
+                Spacer()
+                if let value {
+                    Text(value)
+                        .foregroundColor(GlucoseGuardTheme.red)
+                }
+                Image(systemName: "chevron.right")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundColor(GlucoseGuardTheme.muted)
+            }
+            .padding(.vertical, 14)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+struct GlucoseGuardCGMDetailView: View {
+    @ObservedObject var state: GlucoseGuardHomeState
+    let title: String
+    let remainingDays: Double
+    let insertionText: String
+    let expiryText: String
+    let onRefresh: () -> Void
+    let onNotificationSettings: () -> Void
+    let onDeviceSettings: () -> Void
+    let onStopSensor: () -> Void
+    let onDone: () -> Void
+
+    var body: some View {
+        GlucoseGuardScreenChrome(title) {
             VStack(alignment: .leading, spacing: 16) {
                 GlucoseGuardGlass {
-                    VStack(alignment: .leading, spacing: 16) {
-                        HStack(alignment: .top, spacing: 12) {
-                            ZStack {
-                                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                    .fill(GlucoseGuardTheme.red.opacity(0.16))
-                                    .frame(width: 42, height: 42)
-                                Image(systemName: "waveform.path.ecg")
-                                    .foregroundColor(GlucoseGuardTheme.red)
-                            }
-                            VStack(alignment: .leading, spacing: 6) {
-                                Text("SENSOR EXPIRES IN")
-                                    .font(.system(size: 10, weight: .bold))
-                                    .tracking(1.1)
-                                    .foregroundColor(GlucoseGuardTheme.muted)
-                                Text(String(format: NSLocalizedString("%.0f days", comment: "CGM remaining days"), remainingDays))
-                                    .font(.system(size: 28, weight: .bold, design: .rounded))
-                                    .foregroundColor(.white)
-                                GlucoseGuardProgressBar(progress: 1 - (remainingDays / max(sensorLifeDays, 1)))
-                                Text(String(format: NSLocalizedString("%.0f of %.0f days remaining", comment: "CGM life caption"), remainingDays, sensorLifeDays))
-                                    .font(.caption)
-                                    .foregroundColor(GlucoseGuardTheme.muted)
-                            }
+                    HStack(spacing: 12) {
+                        Image(systemName: "calendar")
+                            .font(.title2)
+                            .foregroundColor(GlucoseGuardTheme.red)
+                            .frame(width: 36, height: 36)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(NSLocalizedString("Sensor expires in", comment: "CGM expiry card").uppercased())
+                                .font(.system(size: 10, weight: .bold))
+                                .tracking(1.0)
+                                .foregroundColor(GlucoseGuardTheme.muted)
+                            Text(String(format: NSLocalizedString("%.0f Days", comment: "CGM remaining days"), remainingDays))
+                                .font(.system(size: 26, weight: .bold, design: .rounded))
+                                .foregroundColor(.white)
                         }
-                        Divider().overlay(GlucoseGuardTheme.hairline)
-                        HStack(alignment: .bottom) {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("LAST READING")
-                                    .font(.system(size: 10, weight: .bold))
-                                    .tracking(1.1)
-                                    .foregroundColor(GlucoseGuardTheme.muted)
-                                Text(lastReading)
-                                    .font(.system(size: 34, weight: .bold, design: .rounded))
-                                    .foregroundColor(.white)
-                            }
-                            Spacer()
+                    }
+                }
+
+                GlucoseGuardGlass {
+                    HStack(alignment: .bottom) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(NSLocalizedString("Last Reading", comment: "CGM last reading").uppercased())
+                                .font(.system(size: 10, weight: .bold))
+                                .tracking(1.0)
+                                .foregroundColor(GlucoseGuardTheme.muted)
+                            Text(state.lastReading)
+                                .font(.system(size: 34, weight: .bold, design: .rounded))
+                                .foregroundColor(.white)
+                        }
+                        Spacer()
+                        Button(action: onRefresh) {
                             HStack(spacing: 6) {
                                 Image(systemName: "arrow.triangle.2.circlepath")
-                                Text(minutesAgo)
+                                Text(state.minutesAgo)
                             }
                             .font(.subheadline.weight(.semibold))
-                            .foregroundColor(GlucoseGuardTheme.green)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 6)
-                            .background(GlucoseGuardTheme.green.opacity(0.12))
-                            .clipShape(Capsule())
+                            .foregroundColor(GlucoseGuardTheme.red)
                         }
+                        .buttonStyle(.plain)
+                    }
+                }
+
+                GlucoseGuardGlass {
+                    VStack(spacing: 0) {
+                        GlucoseGuardNavRow(
+                            title: NSLocalizedString("Notification Settings", comment: "CGM notification settings"),
+                            action: onNotificationSettings
+                        )
+                        Divider().overlay(GlucoseGuardTheme.hairline)
+                        GlucoseGuardNavRow(
+                            title: NSLocalizedString("CGM Settings", comment: "Open Loop CGM settings"),
+                            action: onDeviceSettings
+                        )
                     }
                 }
 
                 GlucoseGuardGlass {
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("AVG")
-                            .font(.system(size: 13, weight: .bold))
-                            .tracking(1.2)
-                            .foregroundColor(GlucoseGuardTheme.muted)
-                        Text(NSLocalizedString("Average glucose for the last 3, 7, 30, and 90 days.", comment: "CGM AVG help"))
-                            .font(.footnote)
-                            .foregroundColor(GlucoseGuardTheme.muted)
-                        ForEach(averages, id: \.0) { item in
-                            HStack {
-                                Text("\(item.0)d")
-                                    .font(.subheadline.weight(.semibold))
-                                    .foregroundColor(GlucoseGuardTheme.muted)
-                                Spacer()
-                                Text(item.1)
-                                    .font(.title3.monospacedDigit().weight(.semibold))
-                                    .foregroundColor(.white)
-                            }
-                            .padding(.vertical, 4)
-                        }
+                        Text(NSLocalizedString("Sensor", comment: "CGM sensor section"))
+                            .font(.headline)
+                            .foregroundColor(.white)
+                        detail("Insertion Time", insertionText)
+                        detail("Sensor Expires", expiryText)
                     }
                 }
 
+                Button(action: onStopSensor) {
+                    Text(NSLocalizedString("Stop Sensor", comment: "Stop the active CGM sensor"))
+                        .font(.headline)
+                        .foregroundColor(GlucoseGuardTheme.red)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                }
+                .buttonStyle(.plain)
+
                 GlucoseGuardPrimaryButton(
-                    title: NSLocalizedString("LibreLinkUp or Dexcom Share", comment: "CGM source overlay"),
-                    action: onChooseSource
+                    title: NSLocalizedString("Done", comment: "Dismiss CGM screen"),
+                    action: onDone
                 )
             }
         }
+    }
+
+    private func detail(_ title: String, _ value: String) -> some View {
+        HStack {
+            Text(title).foregroundColor(GlucoseGuardTheme.muted)
+            Spacer()
+            Text(value).foregroundColor(.white)
+        }
+        .font(.subheadline)
     }
 }
 
@@ -336,115 +380,143 @@ struct GlucoseGuardPumpDetailView: View {
     let pumpName: String
     let remainingDays: Double
     let remainingHours: Double
-    let podLifeDays: Double
-    let basal: String
+    let insulinDelivery: String
     let remainingInsulin: String
-    let currentBolus: String
-    let onChangeBolus: () -> Void
-    let onOpenPump: () -> Void
+    let pairedText: String
+    let expiryText: String
+    let details: [(String, String)]
+    let onSuspend: () -> Void
+    let onReplace: () -> Void
+    let onDone: () -> Void
+
+    @State private var showDetails = false
 
     var body: some View {
         GlucoseGuardScreenChrome(pumpName) {
             VStack(alignment: .leading, spacing: 16) {
                 GlucoseGuardGlass {
-                    VStack(spacing: 18) {
-                        HStack {
-                            Text(pumpName)
-                                .font(.headline)
-                                .foregroundColor(.white)
-                            Spacer()
-                            HStack(spacing: 6) {
-                                Circle().fill(GlucoseGuardTheme.green).frame(width: 7, height: 7)
-                                Image(systemName: "antenna.radiowaves.left.and.right")
-                            }
-                            .foregroundColor(GlucoseGuardTheme.green)
-                        }
-                        ZStack {
-                            Circle()
-                                .fill(RadialGradient(
-                                    colors: [Color.white.opacity(0.14), Color.white.opacity(0.03)],
-                                    center: .center,
-                                    startRadius: 4,
-                                    endRadius: 70
-                                ))
-                                .frame(width: 120, height: 120)
-                            Image(systemName: "oval.portrait.fill")
-                                .font(.system(size: 62))
-                                .foregroundColor(.white.opacity(0.92))
-                                .shadow(color: Color.white.opacity(0.25), radius: 12)
-                        }
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text(NSLocalizedString("Pod expires in", comment: "Pump remaining life label").uppercased())
+                    HStack(spacing: 12) {
+                        Image(systemName: "cross.vial.fill")
+                            .font(.title2)
+                            .foregroundColor(GlucoseGuardTheme.red)
+                            .frame(width: 36, height: 36)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(NSLocalizedString("Pump expires in", comment: "Pump expiry card").uppercased())
                                 .font(.system(size: 10, weight: .bold))
-                                .tracking(1.1)
+                                .tracking(1.0)
                                 .foregroundColor(GlucoseGuardTheme.muted)
                             Text(podExpiryText)
                                 .font(.system(size: 26, weight: .bold, design: .rounded))
                                 .foregroundColor(.white)
-                            GlucoseGuardProgressBar(progress: 1 - (remainingDays / max(podLifeDays, 1)), tint: GlucoseGuardTheme.insulin)
-                        }
-                        HStack {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(NSLocalizedString("Planned basal", comment: "Pump basal label").uppercased())
-                                    .font(.system(size: 10, weight: .bold))
-                                    .tracking(0.8)
-                                    .foregroundColor(GlucoseGuardTheme.muted)
-                                Text(basal)
-                                    .font(.title3.weight(.semibold))
-                                    .foregroundColor(.white)
-                            }
-                            Spacer()
-                            VStack(alignment: .trailing, spacing: 4) {
-                                Text(NSLocalizedString("Remaining insulin", comment: "Pump reservoir label").uppercased())
-                                    .font(.system(size: 10, weight: .bold))
-                                    .tracking(0.8)
-                                    .foregroundColor(GlucoseGuardTheme.muted)
-                                HStack(spacing: 6) {
-                                    Image(systemName: "drop.fill")
-                                        .foregroundColor(GlucoseGuardTheme.insulin)
-                                    Text(remainingInsulin)
-                                        .font(.title3.bold())
-                                        .foregroundColor(.white)
-                                }
-                            }
                         }
                     }
                 }
 
                 GlucoseGuardGlass {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text(NSLocalizedString("Current bolus", comment: "Pump bolus card").uppercased())
-                            .font(.system(size: 10, weight: .bold))
-                            .tracking(1.1)
-                            .foregroundColor(GlucoseGuardTheme.muted)
-                        Text(currentBolus)
-                            .font(.system(size: 32, weight: .bold, design: .rounded))
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(NSLocalizedString("Insulin Delivery", comment: "Pump basal card").uppercased())
+                                .font(.system(size: 10, weight: .bold))
+                                .tracking(0.8)
+                                .foregroundColor(GlucoseGuardTheme.muted)
+                            Text(insulinDelivery)
+                                .font(.title3.weight(.semibold))
+                                .foregroundColor(.white)
+                        }
+                        Spacer()
+                        VStack(alignment: .trailing, spacing: 4) {
+                            Text(NSLocalizedString("Insulin Remaining", comment: "Pump reservoir card").uppercased())
+                                .font(.system(size: 10, weight: .bold))
+                                .tracking(0.8)
+                                .foregroundColor(GlucoseGuardTheme.muted)
+                            Text(remainingInsulin)
+                                .font(.title3.bold())
+                                .foregroundColor(.white)
+                        }
+                    }
+                }
+
+                GlucoseGuardGlass {
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text(NSLocalizedString("Activity", comment: "Pump activity section"))
+                            .font(.headline)
                             .foregroundColor(.white)
-                        GlucoseGuardPrimaryButton(
-                            title: NSLocalizedString("Change bolus", comment: "Change current bolus"),
-                            action: onChangeBolus
+                            .padding(.bottom, 8)
+                        GlucoseGuardNavRow(
+                            title: NSLocalizedString("Suspend Insulin Delivery", comment: "Suspend pump"),
+                            destructive: true,
+                            action: onSuspend
                         )
                     }
                 }
 
-                Button(action: onOpenPump) {
-                    Text(NSLocalizedString("Open pump settings", comment: "Open Loop pump UI"))
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundColor(GlucoseGuardTheme.muted)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
+                GlucoseGuardGlass {
+                    VStack(spacing: 0) {
+                        detail("Pump Paired", pairedText)
+                        Divider().overlay(GlucoseGuardTheme.hairline).padding(.vertical, 8)
+                        detail("Pump Expires", expiryText)
+                        Divider().overlay(GlucoseGuardTheme.hairline).padding(.vertical, 8)
+                        GlucoseGuardNavRow(
+                            title: NSLocalizedString("Device Details", comment: "Pump device details"),
+                            action: { showDetails = true }
+                        )
+                    }
                 }
+
+                Button(action: onReplace) {
+                    Text(NSLocalizedString("Replace Pump", comment: "Replace the active pump"))
+                        .font(.headline)
+                        .foregroundColor(GlucoseGuardTheme.red)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                }
+                .buttonStyle(.plain)
+
+                GlucoseGuardPrimaryButton(
+                    title: NSLocalizedString("Done", comment: "Dismiss pump screen"),
+                    action: onDone
+                )
             }
         }
+        .sheet(isPresented: $showDetails) {
+            ZStack {
+                GlucoseGuardBackdrop()
+                VStack(alignment: .leading, spacing: 14) {
+                    Text(NSLocalizedString("Device Details", comment: "Pump details sheet"))
+                        .font(.title2.bold())
+                        .foregroundColor(.white)
+                    ForEach(details, id: \.0) { item in
+                        HStack {
+                            Text(item.0).foregroundColor(GlucoseGuardTheme.muted)
+                            Spacer()
+                            Text(item.1).foregroundColor(.white)
+                        }
+                        .font(.subheadline)
+                    }
+                    Spacer()
+                    GlucoseGuardPrimaryButton(title: NSLocalizedString("Done", comment: "Close device details"), action: { showDetails = false })
+                }
+                .padding(24)
+            }
+        }
+    }
+
+    private func detail(_ title: String, _ value: String) -> some View {
+        HStack {
+            Text(title).foregroundColor(GlucoseGuardTheme.muted)
+            Spacer()
+            Text(value).foregroundColor(.white)
+        }
+        .font(.subheadline)
     }
 
     private var podExpiryText: String {
         let days = Int(remainingDays)
         let hours = Int((remainingDays - Double(days)) * 24)
         if days <= 0 {
-            return String(format: NSLocalizedString("%d hours", comment: "Pod hours remaining"), max(hours, Int(remainingHours)))
+            return String(format: NSLocalizedString("%d Hours", comment: "Pump hours remaining"), max(hours, Int(remainingHours)))
         }
-        return String(format: NSLocalizedString("%d days %d hours", comment: "Pod days and hours remaining"), days, hours)
+        return String(format: NSLocalizedString("%d Days", comment: "Pump days remaining"), days)
     }
 }
 

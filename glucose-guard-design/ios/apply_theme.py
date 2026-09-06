@@ -14,6 +14,7 @@ INJECT_MARKERS = (
     "    // GLUCOSE_GUARD_THEME home chrome",
     "// GLUCOSE_GUARD_THEME statistics",
     "// GLUCOSE_GUARD_XCODE_DESIGN\n",
+    "// GLUCOSE_GUARD_FIGMA_SCREENS\n",
 )
 
 
@@ -229,13 +230,14 @@ def inject_overlays(path: Path) -> None:
     chrome = (overlays / "GlucoseGuardHomeChrome.swift.txt").read_text(encoding="utf-8")
     stats = (overlays / "GlucoseGuardStatistics.swift.txt").read_text(encoding="utf-8")
     design = (overlays / "GlucoseGuardXcodeDesign.swift.txt").read_text(encoding="utf-8")
+    screens = (overlays / "GlucoseGuardFigmaScreens.swift.txt").read_text(encoding="utf-8")
     text = strip_injected_overlays(path.read_text(encoding="utf-8"))
     if insert_after not in text:
         die(f"Could not insert Glucose Guard overlays into {path}")
     text = text.replace(insert_after, insert_after + "\n" + host + "\n" + chrome + "\n", 1)
     if not text.endswith("\n"):
         text += "\n"
-    text += "\n" + stats + "\n\n" + design
+    text += "\n" + stats + "\n\n" + design + "\n\n" + screens
     if not text.endswith("\n"):
         text += "\n"
     path.write_text(text, encoding="utf-8")
@@ -330,6 +332,13 @@ def apply_toolbar(loop: Path) -> None:
 
 def apply_xcode_design(loop: Path) -> None:
     path = loop / "Loop" / "View Controllers" / "StatusTableViewController.swift"
+    status_imports = path.read_text(encoding="utf-8")
+    if "import UserNotifications" not in status_imports:
+        replace_once(
+            path,
+            "import WidgetKit\n",
+            "import WidgetKit\nimport UserNotifications\n",
+        )
     replace_once(
         path,
         "        navigationController?.setToolbarHidden(false, animated: animated)",
@@ -406,6 +415,18 @@ def apply_xcode_design(loop: Path) -> None:
             }""",
         """                hudView.pumpStatusHUD.presentStatusBadge(self.deviceManager.pumpStatusBadge)
                 hudView.pumpStatusHUD.lifecycleProgress = self.deviceManager.pumpLifecycleProgress
+                self.evaluateGlucoseGuardAlarms()
+            }""",
+        required=False,
+    )
+    replace_once(
+        path,
+        """                hudView.pumpStatusHUD.presentStatusBadge(self.deviceManager.pumpStatusBadge)
+                hudView.pumpStatusHUD.lifecycleProgress = self.deviceManager.pumpLifecycleProgress
+            }""",
+        """                hudView.pumpStatusHUD.presentStatusBadge(self.deviceManager.pumpStatusBadge)
+                hudView.pumpStatusHUD.lifecycleProgress = self.deviceManager.pumpLifecycleProgress
+                self.evaluateGlucoseGuardAlarms()
             }""",
         required=False,
     )

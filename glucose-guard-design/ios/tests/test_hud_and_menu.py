@@ -44,6 +44,26 @@ def test_hud_keeps_glucose() -> None:
         print("HUD glucose patch applies to pinned Loop sources")
 
 
+def test_figma_device_screens() -> None:
+    design = (ROOT / "ios/overlays/GlucoseGuardXcodeDesign.swift.txt").read_text(encoding="utf-8")
+    screens = (ROOT / "ios/overlays/GlucoseGuardFigmaScreens.swift.txt").read_text(encoding="utf-8")
+    host = (ROOT / "ios/overlays/GlucoseGuardTabBarHost.swift.txt").read_text(encoding="utf-8")
+    apply = (ROOT / "ios/apply_theme.py").read_text(encoding="utf-8")
+    assert "Stop Sensor" in design
+    assert "Replace Pump" in design
+    assert "Suspend Insulin Delivery" in design
+    assert "Device Details" in design
+    assert "GlucoseGuardGlucoseSettingsView" in screens
+    assert "LibreView" in screens
+    assert "Dexcom Share" in screens
+    assert "Emergency Contacts" in screens
+    assert "presentGlucoseGuardGlucoseSettings()" in host
+    assert "onCGMTapped()" in host
+    assert "onPumpTapped()" in host
+    assert "GlucoseGuardFigmaScreens.swift.txt" in apply
+    print("Figma CGM/pump/settings screens are wired")
+
+
 def test_menu_overlay() -> None:
     design = (ROOT / "ios/overlays/GlucoseGuardXcodeDesign.swift.txt").read_text(encoding="utf-8")
     host = (ROOT / "ios/overlays/GlucoseGuardTabBarHost.swift.txt").read_text(encoding="utf-8")
@@ -61,4 +81,5 @@ def test_menu_overlay() -> None:
 if __name__ == "__main__":
     test_hud_keeps_glucose()
     test_menu_overlay()
+    test_figma_device_screens()
     print("ok")

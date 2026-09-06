@@ -13,6 +13,7 @@ Branding source of truth for the Loop iOS fork (`iDustbin/LoopWorkspace`).
   - Left HUD pill keeps the **current glucose value** (sensor days stay in CGM detail)
   - CGM / pump taps open the Figma simulator layouts as the **real** device screens (expiry, last reading, stop sensor, suspend, replace, device details)
   - Glucose Settings, alarms, LibreView / Dexcom Share account screens, Emergency Contacts (Phone + WhatsApp)
+  - My Journey (History / Goals / Reports) in dark Glucose Guard chrome, current glucose top-left
   - Learning: dark STATISTIKEN (AVG, SD, **A1C**, TIR / TBR / TAR)
 - **4. Build Loop** applies this tree in the Xcode checkout, then Fastlane uploads TestFlight
 

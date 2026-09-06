@@ -90,6 +90,7 @@
     private func presentGlucoseGuardProfile() {
         presentGlucoseGuardDesign(
             GlucoseGuardProfileView(
+                onJourney: { [weak self] in self?.presentGlucoseGuardJourney() },
                 onGlucoseSettings: { [weak self] in self?.presentGlucoseGuardGlucoseSettings() },
                 onConnections: { [weak self] in self?.presentGlucoseGuardConnections() },
                 onEmergency: { [weak self] in self?.presentGlucoseGuardEmergency() },
@@ -196,53 +197,43 @@
         )
     }
 
-    @objc private func presentGlucoseGuardHealthway() {
-        let unit = deviceManager.displayGlucosePreference.unit
+    private func presentGlucoseGuardJourney() {
+        refreshGlucoseGuardReadings()
         let latest = deviceManager.glucoseStore.latestGlucose
-        let current = latest.map { deviceManager.displayGlucosePreference.format($0.quantity) } ?? "—"
-        let formatter = DateFormatter()
-        formatter.timeStyle = .short
-        let readingTime = latest.map { formatter.string(from: $0.startDate) } ?? "—"
-        let start = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
-        deviceManager.glucoseStore.getGlucoseSamples(start: start, end: nil) { result in
-            let values: [Double]
-            switch result {
-            case .success(let samples):
-                values = samples.map { $0.quantity.doubleValue(for: .milligramsPerDeciliter) }
-            case .failure:
-                values = []
-            }
-            let average = values.isEmpty ? nil : values.reduce(0, +) / Double(values.count)
-            let a1c = average.map { String(format: "%.1f%%", 3.31 + 0.02392 * $0) } ?? "—"
-            let avgText: String
-            if let average {
-                let quantity = HKQuantity(unit: .milligramsPerDeciliter, doubleValue: average)
-                avgText = String(format: "%.1f %@", quantity.doubleValue(for: unit), unit.unitString)
-            } else {
-                avgText = "—"
-            }
-            let tir: String
-            if values.isEmpty {
-                tir = "—"
-            } else {
-                let inRange = values.filter { $0 >= 70 && $0 <= 180 }.count
-                tir = String(format: "%.0f%%", (Double(inRange) / Double(values.count)) * 100)
-            }
-            let spark = Array(values.suffix(48))
-            DispatchQueue.main.async {
-                self.presentGlucoseGuardDesign(
-                    GlucoseGuardHealthwayView(
-                        currentGlucose: current,
-                        readingTime: readingTime,
-                        a1c: a1c,
-                        average: avgText,
-                        tir: tir,
-                        points: spark
-                    ),
-                    title: NSLocalizedString("Healthway", comment: "Healthway tab title")
-                )
-            }
-        }
+        let reading = latest.map { deviceManager.displayGlucosePreference.format($0.quantity) } ?? "— — —"
+        let mgdl = latest?.quantity.doubleValue(for: .milligramsPerDeciliter)
+        presentGlucoseGuardDesign(
+            GlucoseGuardJourneyView(
+                displayUnit: deviceManager.displayGlucosePreference.unit,
+                lastReading: reading,
+                lastReadingMgdl: mgdl,
+                lastReadingDate: latest?.startDate,
+                loader: { start, completion in
+                    self.deviceManager.glucoseStore.getGlucoseSamples(start: start, end: nil) { result in
+                        let samples: [GlucoseGuardTimedSample]
+                        switch result {
+                        case .success(let values):
+                            samples = values.map {
+                                GlucoseGuardTimedSample(
+                                    date: $0.startDate,
+                                    mgdl: $0.quantity.doubleValue(for: .milligramsPerDeciliter)
+                                )
+                            }
+                        case .failure:
+                            samples = []
+                        }
+                        DispatchQueue.main.async { completion(samples) }
+                    }
+                },
+                onSettings: { [weak self] in self?.presentGlucoseGuardGlucoseSettings() },
+                onProfile: { [weak self] in self?.presentGlucoseGuardProfile() }
+            ),
+            title: NSLocalizedString("My Journey", comment: "Journey title")
+        )
+    }
+
+    @objc private func presentGlucoseGuardHealthway() {
+        presentGlucoseGuardJourney()
     }
 
     private func presentGlucoseGuardCGMDetail() {

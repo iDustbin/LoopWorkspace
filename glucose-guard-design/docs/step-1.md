@@ -15,6 +15,7 @@ Branding source of truth for the Loop iOS fork (`iDustbin/LoopWorkspace`).
   - Glucose Settings, alarms, LibreView / Dexcom Share account screens, Emergency Contacts (Phone + WhatsApp)
   - My Journey (History / Goals / Reports) in dark Glucose Guard chrome, current glucose top-left
   - Learning: dark STATISTIKEN (AVG, SD, **A1C**, TIR / TBR / TAR)
+  - Today charts: dark cards, red glucose/insulin traces, blue dashed glucose target lines, live Loop values
 - **4. Build Loop** applies this tree in the Xcode checkout, then Fastlane uploads TestFlight
 
 ## Not in this step

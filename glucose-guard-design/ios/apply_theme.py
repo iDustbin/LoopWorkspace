@@ -90,7 +90,7 @@ def apply_color_fallbacks(loop: Path) -> None:
     replace_once(
         uicolor,
         "@nonobjc static let glucose = UIColor(named: \"glucose\") ?? systemTeal",
-        "@nonobjc static let glucose = UIColor(named: \"glucose\") ?? UIColor(red: 0.957, green: 0.200, blue: 0.235, alpha: 1)",
+        "@nonobjc static let glucose = UIColor(red: 0.957, green: 0.200, blue: 0.235, alpha: 1)",
     )
     replace_once(
         uicolor,
@@ -513,6 +513,167 @@ def apply_bolus_and_settings(loop: Path) -> None:
         print(f"Inserted profile section into {settings}")
 
 
+def apply_predicted_glucose_chart_colors(loop_kit: Path) -> None:
+    path = loop_kit / "LoopKitUI" / "Charts" / "PredictedGlucoseChart.swift"
+    if not path.is_file():
+        die(f"LoopKit PredictedGlucoseChart missing: {path}")
+    text = path.read_text(encoding="utf-8")
+    if "targetBoundLines" in text and "glucoseFill" in text:
+        print(f"Predicted glucose chart already uses the screenshot colors in {path}")
+        return
+    replace_once(
+        path,
+        "        let targetFill = colors.glucoseTint.withAlphaComponent(0.2)\n"
+        "        let overrideFill: UIColor = colors.glucoseTint.withAlphaComponent(0.45)\n",
+        "        let targetFill = UIColor.clear\n"
+        "        let overrideFill: UIColor = UIColor.clear\n",
+    )
+    replace_once(
+        path,
+        """        let targetsLayer = ChartPointsFillsLayer(
+            xAxis: xAxisLayer.axis,
+            yAxis: yAxisLayer.axis,
+            fills: fills
+        )""",
+        """        let targetsLayer = ChartPointsFillsLayer(
+            xAxis: xAxisLayer.axis,
+            yAxis: yAxisLayer.axis,
+            fills: fills
+        )
+        let targetStroke = UIColor(red: 0.31, green: 0.64, blue: 0.96, alpha: 1)
+        var targetBoundLines: ChartLayer?
+        let targetYs = Set(targetGlucosePoints.flatMap { $0.points }.map { $0.y.scalar })
+        if let xStart = xAxisValues.first, let xEnd = xAxisValues.last, !targetYs.isEmpty {
+            let models = targetYs.sorted().map { y in
+                let points = [
+                    ChartPoint(x: xStart, y: ChartAxisValueDouble(y)),
+                    ChartPoint(x: xEnd, y: ChartAxisValueDouble(y))
+                ]
+                return ChartLineModel(chartPoints: points, lineColor: targetStroke, lineWidth: 1.2, animDuration: 0, animDelay: 0, dashPattern: [6, 4])
+            }
+            targetBoundLines = ChartPointsLineLayer(xAxis: xAxisLayer.axis, yAxis: yAxisLayer.axis, lineModels: models)
+        }""",
+    )
+    replace_once(
+        path,
+        "        let circles = ChartPointsScatterCirclesLayer(xAxis: xAxisLayer.axis, yAxis: yAxisLayer.axis, chartPoints: glucosePoints, displayDelay: 0, itemSize: CGSize(width: 4, height: 4), itemFillColor: colors.glucoseTint, optimized: true)\n",
+        "        let circles = ChartPointsScatterCirclesLayer(xAxis: xAxisLayer.axis, yAxis: yAxisLayer.axis, chartPoints: glucosePoints, displayDelay: 0, itemSize: CGSize(width: 5, height: 5), itemFillColor: colors.glucoseTint, optimized: true)\n"
+        "        var glucoseLine: ChartLayer?\n"
+        "        var glucoseFill: ChartLayer?\n"
+        "        if glucosePoints.count > 1 {\n"
+        "            let historic = ChartLineModel(chartPoints: glucosePoints, lineColor: colors.glucoseTint, lineWidth: 2.4, animDuration: 0, animDelay: 0)\n"
+        "            glucoseLine = ChartPointsLineLayer(xAxis: xAxisLayer.axis, yAxis: yAxisLayer.axis, lineModels: [historic])\n"
+        "            let under = ChartPointsFill(chartPoints: glucosePoints, fillColor: colors.glucoseTint.withAlphaComponent(0.22), createContainerPoints: true)\n"
+        "            glucoseFill = ChartPointsFillsLayer(xAxis: xAxisLayer.axis, yAxis: yAxisLayer.axis, fills: [under])\n"
+        "        }\n",
+    )
+    replace_once(
+        path,
+        """        let layers: [ChartLayer?] = [
+            gridLayer,
+            targetsLayer,
+            xAxisLayer,
+            yAxisLayer,
+            glucoseChartCache?.highlightLayer,
+            prediction,
+            alternatePrediction,
+            circles
+        ]""",
+        """        let layers: [ChartLayer?] = [
+            gridLayer,
+            targetsLayer,
+            targetBoundLines,
+            glucoseFill,
+            xAxisLayer,
+            yAxisLayer,
+            glucoseChartCache?.highlightLayer,
+            glucoseLine,
+            circles,
+            prediction,
+            alternatePrediction
+        ]""",
+    )
+
+
+def apply_iob_chart_style(loop_kit: Path) -> None:
+    path = loop_kit / "LoopKitUI" / "Charts" / "IOBChart.swift"
+    if not path.is_file():
+        die(f"LoopKit IOBChart missing: {path}")
+    text = path.read_text(encoding="utf-8")
+    if "iobDots" in text:
+        print(f"IOB chart already uses the screenshot style in {path}")
+        return
+    replace_once(
+        path,
+        "        let iobArea = ChartPointsFillsLayer(xAxis: xAxisLayer.axis, yAxis: yAxisLayer.axis, fills: [ChartPointsFill(chartPoints: iobPoints, fillColor: colors.insulinTint.withAlphaComponent(0.5))])\n",
+        "        let iobArea = ChartPointsFillsLayer(xAxis: xAxisLayer.axis, yAxis: yAxisLayer.axis, fills: [ChartPointsFill(chartPoints: iobPoints, fillColor: UIColor.clear)])\n"
+        "        let iobDots = ChartPointsScatterCirclesLayer(xAxis: xAxisLayer.axis, yAxis: yAxisLayer.axis, chartPoints: iobPoints, displayDelay: 0, itemSize: CGSize(width: 6, height: 6), itemFillColor: colors.insulinTint, optimized: true)\n",
+    )
+    replace_once(
+        path,
+        """        let layers: [ChartLayer?] = [
+            gridLayer,
+            xAxisLayer,
+            yAxisLayer,
+            zeroGuidelineLayer,
+            iobChartCache?.highlightLayer,
+            iobArea,
+            iobLine,
+        ]""",
+        """        let layers: [ChartLayer?] = [
+            gridLayer,
+            xAxisLayer,
+            yAxisLayer,
+            zeroGuidelineLayer,
+            iobChartCache?.highlightLayer,
+            iobArea,
+            iobLine,
+            iobDots,
+        ]""",
+    )
+
+
+def apply_glucose_chart_caption(loop: Path) -> None:
+    path = loop / "Loop" / "View Controllers" / "StatusTableViewController.swift"
+    text = path.read_text(encoding="utf-8")
+    if "applyGlucoseGuardChartChrome" in text:
+        print(f"Chart card chrome already wired in {path}")
+        return
+    replace_once(
+        path,
+        """            cell.setSubtitleTextColor(color: UIColor.secondaryLabel)
+
+            return cell""",
+        """            cell.setSubtitleTextColor(color: UIColor(white: 0.62, alpha: 1))
+            applyGlucoseGuardChartChrome(to: cell)
+
+            return cell""",
+    )
+
+
+def apply_chart_palette_red(loop: Path) -> None:
+    path = loop / "Loop" / "Extensions" / "ChartColorPalette+Loop.swift"
+    if not path.is_file():
+        die(f"Missing chart palette {path}")
+    text = path.read_text(encoding="utf-8")
+    if "0.957, green: 0.200, blue: 0.235" in text and "insulinTint: UIColor" in text:
+        print(f"Chart tints already brand red in {path}")
+        return
+    replace_once(
+        path,
+        "return ChartColorPalette(axisLine: .axisLineColor, axisLabel: .axisLabelColor, grid: .gridColor, glucoseTint: .glucoseTintColor, insulinTint: .insulinTintColor, carbTint: .carbTintColor)",
+        "return ChartColorPalette(axisLine: .clear, axisLabel: UIColor(white: 0.62, alpha: 1), grid: UIColor(white: 0.22, alpha: 1), glucoseTint: UIColor(red: 0.957, green: 0.200, blue: 0.235, alpha: 1), insulinTint: UIColor(red: 0.957, green: 0.200, blue: 0.235, alpha: 1), carbTint: UIColor(red: 0.957, green: 0.200, blue: 0.235, alpha: 1))",
+    )
+
+
+def apply_glucose_range_chart(loop: Path) -> None:
+    loop_kit = loop.parent / "LoopKit"
+    apply_predicted_glucose_chart_colors(loop_kit)
+    apply_iob_chart_style(loop_kit)
+    apply_chart_palette_red(loop)
+    apply_glucose_chart_caption(loop)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--loop-root", required=True)
@@ -529,6 +690,7 @@ def main() -> None:
     apply_toolbar(loop)
     apply_xcode_design(loop)
     apply_bolus_and_settings(loop)
+    apply_glucose_range_chart(loop)
     print("Glucose Guard mobile theme applied")
 
 

@@ -354,6 +354,16 @@ def apply_xcode_design(loop: Path) -> None:
 
         if !appearedOnce {""",
     )
+    replace_once(
+        path,
+        """        super.viewWillTransition(to: size, with: coordinator)
+    }""",
+        """        super.viewWillTransition(to: size, with: coordinator)
+        coordinator.animate(alongsideTransition: { [weak self] _ in
+            self?.layoutGlucoseGuardTabBar()
+        })
+    }""",
+    )
     status_text = path.read_text(encoding="utf-8")
     if "installGlucoseGuardTabBar()" not in status_text:
         replace_once(

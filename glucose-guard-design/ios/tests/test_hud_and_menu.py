@@ -85,8 +85,14 @@ def test_menu_overlay() -> None:
     assert "presentGlucoseGuardLearning()" not in host.split("onToday")[0]
     assert 'onLearning:' not in host
     assert "offset(y: -34)" not in design
-    assert "view.bottomAnchor" in host
+    assert "view.addSubview(host.view)" not in host
+    assert "glucoseGuardTabBarContainer" in host
+    assert "layoutGlucoseGuardTabBar" in host
+    assert "!(navView is UITableView)" in host
+    assert "presentBolusScreen()" in host
     assert "additionalSafeAreaInsets.bottom" in host
+    assert "frame(maxWidth: .infinity, maxHeight: .infinity" in design
+    assert "minHeight: 58" in design
     print("Figma menu overlay wires Today / Food / Bolus / Profile")
 
 

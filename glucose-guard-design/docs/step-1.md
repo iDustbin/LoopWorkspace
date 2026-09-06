@@ -9,7 +9,7 @@ Branding source of truth for the Loop iOS fork (`iDustbin/LoopWorkspace`).
 - iOS and watchOS override app icons
 - Loop’s Today HUD and predicted-glucose charts stay — Figma is the direction, not a replacement
   - Full green/white circle around the logo (no chopped C-gap)
-  - Dark Loop chrome, brand red, Figma menu **Today · Food · Bolus · Profile** plus a **+** above the right, pinned to the screen bottom so charts stay readable
+  - Dark Loop chrome, brand red, Figma menu **Today · Food · Bolus · Profile** plus a **+** on the right, pinned to the navigation view (never the table) so the bar stays full-width at the bottom
   - Left HUD pill keeps the **current glucose value** (sensor days stay in CGM detail)
   - CGM / pump taps open the Figma simulator layouts as the **real** device screens (expiry, last reading, stop sensor, suspend, replace, device details)
   - Glucose Settings, alarms, LibreView / Dexcom Share account screens, Emergency Contacts (Phone + WhatsApp)

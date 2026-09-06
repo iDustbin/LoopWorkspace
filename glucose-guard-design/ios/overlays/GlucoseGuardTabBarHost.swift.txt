@@ -216,12 +216,15 @@
         let latest = deviceManager.glucoseStore.latestGlucose
         let reading = latest.map { deviceManager.displayGlucosePreference.format($0.quantity) } ?? "— — —"
         let mgdl = latest?.quantity.doubleValue(for: .milligramsPerDeciliter)
+        let target = deviceManager.loopManager.settings.glucoseTargetRangeSchedule?.quantityRange(at: Date())
         presentGlucoseGuardDesign(
             GlucoseGuardJourneyView(
                 displayUnit: deviceManager.displayGlucosePreference.unit,
                 lastReading: reading,
                 lastReadingMgdl: mgdl,
                 lastReadingDate: latest?.startDate,
+                targetLowMgdl: target?.lowerBound.doubleValue(for: .milligramsPerDeciliter),
+                targetHighMgdl: target?.upperBound.doubleValue(for: .milligramsPerDeciliter),
                 loader: { start, completion in
                     self.deviceManager.glucoseStore.getGlucoseSamples(start: start, end: nil) { result in
                         let samples: [GlucoseGuardTimedSample]

@@ -10,29 +10,43 @@
         navigationController?.navigationBar.tintColor = UIColor(red: 0.957, green: 0.200, blue: 0.235, alpha: 1)
         guard glucoseGuardTabBarHost == nil else { return }
         navigationController?.setToolbarHidden(true, animated: false)
+        let bottomInset = max(view.safeAreaInsets.bottom, 20)
         let bar = GlucoseGuardTabBar(
             state: glucoseGuardHomeState,
-            onToday: { [weak self] in self?.presentGlucoseGuardToday() },
+            bottomInset: bottomInset,
+            onToday: { [weak self] in
+                self?.glucoseGuardHomeState.selectedTab = 0
+                self?.presentGlucoseGuardToday()
+            },
             onFood: { [weak self] in self?.presentGlucoseGuardFood() },
             onBolus: { [weak self] in self?.presentBolusScreen() },
-            onProfile: { [weak self] in self?.presentGlucoseGuardProfile() },
+            onProfile: { [weak self] in
+                self?.glucoseGuardHomeState.selectedTab = 3
+                self?.presentGlucoseGuardProfile()
+            },
             onAdd: { [weak self] in self?.presentGlucoseGuardLogSheet() }
         )
         let host = UIHostingController(rootView: bar)
-        host.view.backgroundColor = .clear
+        host.view.backgroundColor = UIColor(red: 0.02, green: 0.02, blue: 0.03, alpha: 1)
+        host.view.clipsToBounds = true
+        if #available(iOS 16.4, *) {
+            host.safeAreaRegions = []
+        }
         addChild(host)
         host.view.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(host.view)
+        let barHeight: CGFloat = 114 + bottomInset
         NSLayoutConstraint.activate([
             host.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             host.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            host.view.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
-            host.view.heightAnchor.constraint(equalToConstant: 70)
+            host.view.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            host.view.heightAnchor.constraint(equalToConstant: barHeight)
         ])
         host.didMove(toParent: self)
         glucoseGuardTabBarHost = host
-        tableView.contentInset.bottom = 118
-        tableView.verticalScrollIndicatorInsets.bottom = 118
+        additionalSafeAreaInsets.bottom = 114
+        tableView.contentInset.bottom = 0
+        tableView.verticalScrollIndicatorInsets.bottom = 0
         GlucoseGuardAlertCenter.shared.install()
         refreshGlucoseGuardReadings()
     }

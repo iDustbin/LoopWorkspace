@@ -5,8 +5,8 @@ This fork builds **Glucose Guard** on top of [LoopKit/LoopWorkspace](https://git
 TestFlight is **4. Build Loop** (Xcode + Fastlane). There is no Bootstrap step.
 
 1. This repo is the fork of [LoopKit/LoopWorkspace](https://github.com/LoopKit/LoopWorkspace).
-2. `glucose-guard-design/` in this repo is the Xcode/SwiftUI theme (logo, name, Today / Learning / Healthway screens).
-3. **4. Build Loop** checks out Loop, applies that Xcode design, and uploads to the existing TestFlight app (`com.TEAMID.loopkit.Loop`).
+2. `glucose-guard-design/` in this repo is the app icon and **GlucoseGuard** display name.
+3. **4. Build Loop** checks out Loop, applies that name and those icons, and uploads to the existing TestFlight app (`com.TEAMID.loopkit.Loop`). Loop UI is not patched.
 
 Run **4. Build Loop** after `GH_PAT` is set. Install that TestFlight build.
 

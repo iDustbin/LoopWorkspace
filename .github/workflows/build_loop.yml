@@ -212,7 +212,7 @@ jobs:
           # Several patches may be added per submodule.
           # Adding comments (#) may be useful to easily tell the individual patches apart.
 
-      - name: Apply Glucose Guard Xcode design
+      - name: Apply Glucose Guard name and icons
         env:
           GLUCOSE_GUARD_DESIGN_PATH: ${{ github.workspace }}/glucose-guard-design
         run: ./Scripts/apply_glucose_guard_branding.sh

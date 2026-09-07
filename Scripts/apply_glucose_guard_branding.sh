@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
-# Apply the Glucose Guard Xcode design from this LoopWorkspace checkout.
-# Used after Loop submodule checkout so icons, name, and SwiftUI screens
-# land in the Xcode project before Fastlane archives TestFlight.
+# Apply Glucose Guard name and app icons onto a LoopWorkspace checkout.
+# Does not patch Loop UI, charts, HUD, or menus.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -159,15 +158,4 @@ printf '%s\n' \
   "MAIN_APP_DISPLAY_NAME = ${DISPLAY_NAME}" \
   > "${ROOT}/Loop/LoopOverride.xcconfig"
 echo "Wrote Loop/LoopOverride.xcconfig (${DISPLAY_NAME})"
-
-THEME_SCRIPT="${SRC}/ios/apply_theme.py"
-if [[ ! -f "${THEME_SCRIPT}" ]]; then
-  THEME_SCRIPT="${ROOT}/glucose-guard-design/ios/apply_theme.py"
-fi
-if [[ ! -d "${ROOT}/Loop/LoopUI" ]]; then
-  echo "Loop submodule is missing; cannot apply Glucose Guard theme" >&2
-  exit 1
-fi
-python3 "${THEME_SCRIPT}" --loop-root "${ROOT}/Loop" --design-root "${SRC}"
-
-echo "Glucose Guard Xcode design applied from ${SRC}"
+echo "Glucose Guard name and icons applied from ${SRC} (Loop UI left unchanged)"
